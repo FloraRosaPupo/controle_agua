@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text("Bebeu", style: theme.textTheme.headlineLarge),
+                      Text("bebeu", style: theme.textTheme.headlineLarge),
                       const SizedBox(height: 8),
                       Text(
                         "Mantenha-se hidratado todos os dias.",

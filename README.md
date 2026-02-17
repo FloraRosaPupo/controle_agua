@@ -1,9 +1,9 @@
 
-# 💧 BEBEU?
+# 💧 bebeu?
 
 Aplicativo mobile para controle de consumo diário de água.
 
-O **BEBEU?** ajuda o usuário a registrar a quantidade de água ingerida ao longo do dia, acompanhar o progresso em relação à meta diária, receber lembretes para se hidratar e visualizar o histórico dos últimos 7 dias.
+O **bebeu?** ajuda o usuário a registrar a quantidade de água ingerida ao longo do dia, acompanhar o progresso em relação à meta diária, receber lembretes para se hidratar e visualizar o histórico dos últimos 7 dias.
 
 Simples, direto e funcional. Se não bebeu… ele pergunta. 😅
 

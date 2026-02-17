@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
 import '../../controllers/home_controller.dart';
+import './widgets/settings_view.dart';
+import './widgets/add_water_button.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -320,38 +322,45 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildHomeContent(ThemeData theme, ColorScheme colors) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
+          _buildHeader(theme, colors),
+          const SizedBox(height: 24),
+          _buildCircularProgress(theme, colors),
+          const SizedBox(height: 50),
+          _buildAddButton(colors),
+          const SizedBox(height: 24),
+          _buildQuickSelect(theme, colors),
+          const SizedBox(height: 40),
+          _buildHistoryHeader(theme, colors),
+          const SizedBox(height: 16),
+          ..._controller.todayHistory.map(
+            (log) => _buildHistoryItem(theme, colors, log),
+          ),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
     return Scaffold(
-      extendBody: true, // Permite que o corpo passe por baixo da BottomAppBar
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: colors.primary.withValues(alpha: 0.4),
-              blurRadius: 20,
-              spreadRadius: 2,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {},
-          backgroundColor: colors.primary,
-          elevation: 0,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, color: Colors.black, size: 32),
-        ),
-      ),
+      extendBody: true,
+      floatingActionButton: AddWaterButton(onPressed: () {}),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         padding: const EdgeInsets.symmetric(vertical: 8),
         height: 70,
-        shape: const CircularNotchedRectangle(), // Se quiser o "recorte"
+        shape: const CircularNotchedRectangle(),
         notchMargin: 8,
         color: colors.surface,
         child: Row(
@@ -359,38 +368,22 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildNavItem(0, Icons.water_drop_rounded, "HOJE", colors),
             _buildNavItem(1, Icons.bar_chart_rounded, "HISTÓRICO", colors),
-            const SizedBox(width: 48), // Espaço para o FAB
+            const SizedBox(width: 48),
             _buildNavItem(2, Icons.notifications_rounded, "ALERTAS", colors),
             _buildNavItem(3, Icons.settings_rounded, "AJUSTES", colors),
           ],
         ),
       ),
       body: SafeArea(
-        bottom: false, // Deixa o conteúdo descer até o final
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 20),
-              _buildHeader(theme, colors),
-              const SizedBox(height: 40),
-              _buildCircularProgress(theme, colors),
-              const SizedBox(height: 50),
-              _buildAddButton(colors),
-              const SizedBox(height: 24),
-              _buildQuickSelect(theme, colors),
-              const SizedBox(height: 40),
-              _buildHistoryHeader(theme, colors),
-              const SizedBox(height: 16),
-              ..._controller.todayHistory.map(
-                (log) => _buildHistoryItem(theme, colors, log),
-              ),
-              const SizedBox(
-                height: 100,
-              ), // Espaço para não ficar atrás da barra
-            ],
-          ),
+        bottom: false,
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            _buildHomeContent(theme, colors),
+            const Center(child: Text("Histórico")), // Placeholder
+            const Center(child: Text("Alertas")), // Placeholder
+            const SettingsView(),
+          ],
         ),
       ),
     );

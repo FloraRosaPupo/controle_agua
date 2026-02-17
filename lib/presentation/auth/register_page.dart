@@ -66,7 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      "Bebeu",
+                      "bebeu",
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 24,
