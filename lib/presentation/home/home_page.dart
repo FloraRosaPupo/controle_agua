@@ -1,0 +1,451 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/widget_previews.dart';
+import '../../core/theme/app_theme.dart';
+import '../../controllers/home_controller.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _controller = HomeController();
+  int _selectedIndex = 0;
+
+  Widget _buildHeader(ThemeData theme, ColorScheme colors) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [colors.primary, colors.primary.withValues(alpha: 0.3)],
+            ),
+          ),
+          child: const CircleAvatar(
+            radius: 24,
+            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=alex'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "META ATIVA",
+              style: theme.textTheme.bodySmall?.copyWith(
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            Text(_controller.userName, style: theme.textTheme.titleLarge),
+          ],
+        ),
+        const Spacer(),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.onSurface.withValues(alpha: 0.1)),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.calendar_today_rounded,
+              size: 20,
+              color: colors.onSurface,
+            ),
+            onPressed: () {},
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCircularProgress(ThemeData theme, ColorScheme colors) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background Glow
+          Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                ),
+              ],
+            ),
+          ),
+          // Circular Progress Indicator
+          SizedBox(
+            width: 240,
+            height: 240,
+            child: CircularProgressIndicator(
+              value: _controller.progress,
+              strokeWidth: 12,
+              backgroundColor: colors.primary.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+              strokeCap: StrokeCap.round,
+            ),
+          ),
+          // Inner Info
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.water_drop, color: colors.primary, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                "${_controller.currentIntake}",
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontSize: 54,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                "DE ${_controller.dailyGoal}ml",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  color: colors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: colors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  "${_controller.percentage}% DO OBJETIVO",
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddButton(ColorScheme colors) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            colors.primary.withValues(alpha: 0.8),
+            colors.secondary.withValues(alpha: 0.8),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.add_circle, color: Colors.black),
+        label: const Text(
+          "Adicionar Água",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size(double.infinity, 64),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickSelect(ThemeData theme, ColorScheme colors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildSelectCard(theme, colors, "200", "ML"),
+        _buildSelectCard(theme, colors, "350", "ML"),
+        _buildSelectCard(theme, colors, "500", "ML"),
+      ],
+    );
+  }
+
+  Widget _buildSelectCard(
+    ThemeData theme,
+    ColorScheme colors,
+    String amount,
+    String unit,
+  ) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              amount,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface.withValues(alpha: 0.3),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryHeader(ThemeData theme, ColorScheme colors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Histórico Hoje",
+          style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
+        ),
+        TextButton(
+          onPressed: () {},
+          child: Text(
+            "VER TODOS",
+            style: TextStyle(
+              color: colors.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryItem(
+    ThemeData theme,
+    ColorScheme colors,
+    Map<String, dynamic> log,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.local_drink_outlined,
+              color: colors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                log["type"],
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                log["time"],
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            "+${log["amount"]}ml",
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Scaffold(
+      extendBody: true, // Permite que o corpo passe por baixo da BottomAppBar
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: colors.primary.withValues(alpha: 0.4),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {},
+          backgroundColor: colors.primary,
+          elevation: 0,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.black, size: 32),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        height: 70,
+        shape: const CircularNotchedRectangle(), // Se quiser o "recorte"
+        notchMargin: 8,
+        color: colors.surface,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.water_drop_rounded, "HOJE", colors),
+            _buildNavItem(1, Icons.bar_chart_rounded, "HISTÓRICO", colors),
+            const SizedBox(width: 48), // Espaço para o FAB
+            _buildNavItem(2, Icons.notifications_rounded, "ALERTAS", colors),
+            _buildNavItem(3, Icons.settings_rounded, "AJUSTES", colors),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        bottom: false, // Deixa o conteúdo descer até o final
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 20),
+              _buildHeader(theme, colors),
+              const SizedBox(height: 40),
+              _buildCircularProgress(theme, colors),
+              const SizedBox(height: 50),
+              _buildAddButton(colors),
+              const SizedBox(height: 24),
+              _buildQuickSelect(theme, colors),
+              const SizedBox(height: 40),
+              _buildHistoryHeader(theme, colors),
+              const SizedBox(height: 16),
+              ..._controller.todayHistory.map(
+                (log) => _buildHistoryItem(theme, colors, log),
+              ),
+              const SizedBox(
+                height: 100,
+              ), // Espaço para não ficar atrás da barra
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    String label,
+    ColorScheme colors,
+  ) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isSelected
+                ? colors.primary
+                : colors.onSurface.withValues(alpha: 0.3),
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isSelected
+                  ? colors.primary
+                  : colors.onSurface.withValues(alpha: 0.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+@Preview(name: 'Home - Light')
+Widget homePageLightPreview() {
+  return MaterialApp(
+    theme: AppTheme.lightTheme,
+    debugShowCheckedModeBanner: false,
+    home: const HomePage(),
+  );
+}
+
+@Preview(name: 'Home - Dark')
+Widget homePageDarkPreview() {
+  return MaterialApp(
+    theme: AppTheme.darkTheme,
+    debugShowCheckedModeBanner: false,
+    home: const HomePage(),
+  );
+}

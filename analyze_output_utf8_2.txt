@@ -1,0 +1,7 @@
+﻿Analyzing bebeu...                                              
+
+   info - The local variable '_isPasswordVisible' starts with an underscore - lib\presentation\auth\login_page.dart:18:10 - no_leading_underscores_for_local_identifiers
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\auth\login_page.dart:38:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\auth\login_page.dart:40:49 - deprecated_member_use
+warning - Dead code - lib\presentation\auth\login_page.dart:104:31 - dead_code
+
