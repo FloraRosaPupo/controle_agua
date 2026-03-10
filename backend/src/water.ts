@@ -57,5 +57,20 @@ export async function today(req: AuthRequest, res: Response) {
 
     const total = logs.reduce((acc, log) => acc + log.amount, 0)
 
-    res.json({ total, logs })
+    // Buscamos o usuário para saber a meta diária dele
+    const user = await prisma.user.findUnique({
+        where: { id: userId! },
+        select: { dailyGoal: true }
+    })
+
+    const dailyGoal = user?.dailyGoal || 2000
+    const remaining = Math.max(0, dailyGoal - total)
+
+    res.json({
+        total,
+        dailyGoal,
+        remaining,
+        percent: total / dailyGoal,
+        logs
+    })
 }
