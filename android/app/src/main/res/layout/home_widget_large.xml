@@ -26,7 +26,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_water_drop"
-                android:contentDescription="Água" />
+                android:contentDescription="Agua" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -79,13 +79,12 @@
 
         <ProgressBar
             android:id="@+id/widget_progress"
-            style="@android:style/Widget.ProgressBar.Horizontal"
+            style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="10dp"
             android:layout_marginTop="12dp"
             android:max="100"
             android:progress="0"
-            android:progressDrawable="@drawable/widget_progress_bar"
             android:indeterminate="false" />
 
         <LinearLayout
@@ -110,8 +109,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@android:drawable/ic_input_add"
-                android:contentDescription="Adicionar"
-                android:tint="#2196F3" />
+                android:contentDescription="Adicionar" />
 
             <TextView
                 android:layout_width="wrap_content"

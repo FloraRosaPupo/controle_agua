@@ -17,26 +17,34 @@ class HomeWidgetSmallProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         for (appWidgetId in appWidgetIds) {
-            val pendingIntent = HomeWidgetLaunchIntent.getActivity(
-                context,
-                MainActivity::class.java
-            )
-            val views = RemoteViews(context.packageName, R.layout.home_widget_small).apply {
-                setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-                val imagePath = widgetData.getString("filename_small", null)
-                val bitmap = imagePath?.let { BitmapFactory.decodeFile(it) }
-                if (bitmap != null) {
-                    setImageViewBitmap(R.id.widget_image, bitmap)
-                    setViewVisibility(R.id.widget_image, View.VISIBLE)
-                    setViewVisibility(R.id.widget_default, View.GONE)
-                } else {
-                    setViewVisibility(R.id.widget_image, View.GONE)
-                    setViewVisibility(R.id.widget_default, View.VISIBLE)
-                    val progress = widgetData.getInt("progressPercent", 0)
-                    setTextViewText(R.id.widget_percent, "$progress%")
+            try {
+                val pendingIntent = HomeWidgetLaunchIntent.getActivity(
+                    context,
+                    MainActivity::class.java
+                )
+                val views = RemoteViews(context.packageName, R.layout.home_widget_small).apply {
+                    setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+                    val imagePath = widgetData.getString("filename_small", null)
+                    val bitmap = imagePath?.let { BitmapFactory.decodeFile(it) }
+                    if (bitmap != null) {
+                        setImageViewBitmap(R.id.widget_image, bitmap)
+                        setViewVisibility(R.id.widget_image, View.VISIBLE)
+                        setViewVisibility(R.id.widget_default, View.GONE)
+                    } else {
+                        setViewVisibility(R.id.widget_image, View.GONE)
+                        setViewVisibility(R.id.widget_default, View.VISIBLE)
+                        val progress = widgetData.getInt("progressPercent", 0).coerceIn(0, 100)
+                        setTextViewText(R.id.widget_percent, "$progress%")
+                    }
                 }
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+            } catch (e: Exception) {
+                val views = RemoteViews(context.packageName, R.layout.home_widget_small).apply {
+                    setOnClickPendingIntent(R.id.widget_container,
+                        HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java))
+                }
+                appWidgetManager.updateAppWidget(appWidgetId, views)
             }
-            appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
 }

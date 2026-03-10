@@ -55,8 +55,7 @@
                 android:layout_height="36dp"
                 android:layout_gravity="center"
                 android:src="@android:drawable/ic_input_add"
-                android:contentDescription="Adicionar"
-                android:tint="#FFFFFF" />
+                android:contentDescription="Adicionar" />
         </FrameLayout>
 
         <View
