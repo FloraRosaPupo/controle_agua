@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../controllers/settings_controller.dart';
+import '../cubit/settings_cubit.dart';
+import '../../auth/login_page.dart'; // para logout fallback ou usar go_router
+import 'package:go_router/go_router.dart';
+import '../../../core/api/api_client.dart'; // Caso precise limpar o token etc (ou melhor chamar AuthService)
+import '../../../data/services/auth_service.dart';
 
-class SettingsView extends StatefulWidget {
+class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
-
-  @override
-  State<SettingsView> createState() => _SettingsViewState();
-}
-
-class _SettingsViewState extends State<SettingsView> {
-  final _controller = SettingsController();
 
   Widget _buildSectionTitle(String title, ThemeData theme, ColorScheme colors) {
     return Padding(
@@ -27,7 +25,11 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildProfileCard(ThemeData theme, ColorScheme colors) {
+  Widget _buildProfileCard(
+    ThemeData theme,
+    ColorScheme colors,
+    SettingsState state,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -58,23 +60,27 @@ class _SettingsViewState extends State<SettingsView> {
             ),
           ),
           const SizedBox(width: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _controller.userName,
-                style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _controller.planName,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  letterSpacing: 1.1,
-                  fontWeight: FontWeight.bold,
-                  color: colors.primary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  state.name.isEmpty ? 'Usuário' : state.name,
+                  style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  state.email,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -82,10 +88,11 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget _buildToggleTile({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required String settingKey,
     required ColorScheme colors,
   }) {
     return Container(
@@ -114,7 +121,16 @@ class _SettingsViewState extends State<SettingsView> {
           const Spacer(),
           Switch(
             value: value,
-            onChanged: onChanged,
+            onChanged: (val) {
+              if (settingKey == 'theme') {
+                context.read<SettingsCubit>().updateSetting(
+                  'theme',
+                  val ? 'dark' : 'light',
+                );
+              } else {
+                context.read<SettingsCubit>().updateSetting(settingKey, val);
+              }
+            },
             activeColor: colors.primary,
             activeTrackColor: colors.primary.withValues(alpha: 0.2),
           ),
@@ -123,7 +139,12 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildGoalSection(ThemeData theme, ColorScheme colors) {
+  Widget _buildGoalSection(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colors,
+    SettingsState state,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -163,7 +184,7 @@ class _SettingsViewState extends State<SettingsView> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  "${_controller.dailyGoal.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} ml",
+                  "\${state.dailyGoal.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '\${m[1]}.')} ml",
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -182,12 +203,15 @@ class _SettingsViewState extends State<SettingsView> {
               trackHeight: 4,
             ),
             child: Slider(
-              value: _controller.dailyGoal,
-              min: _controller.minGoal,
-              max: _controller.maxGoal,
-              divisions: 16, // Assuming 250ml steps for 1000-5000 range
+              value: state.dailyGoal.clamp(500.0, 10000.0),
+              min: 500,
+              max: 10000,
+              divisions: 38,
+              onChangeEnd: (value) {
+                context.read<SettingsCubit>().updateSetting('dailyGoal', value);
+              },
               onChanged: (value) {
-                setState(() => _controller.updateGoal(value));
+                // Aqui podemos se quiser só atualizar localmente, mas onChangeEnd bate na api.
               },
             ),
           ),
@@ -196,9 +220,9 @@ class _SettingsViewState extends State<SettingsView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSliderLabel("${_controller.minGoal.toInt()} ml", colors),
-                _buildSliderLabel("2.500 ml", colors),
-                _buildSliderLabel("${_controller.maxGoal.toInt()} ml", colors),
+                _buildSliderLabel("500 ml", colors),
+                _buildSliderLabel("5.000 ml", colors),
+                _buildSliderLabel("10.000 ml", colors),
               ],
             ),
           ),
@@ -223,79 +247,95 @@ class _SettingsViewState extends State<SettingsView> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 20),
-          // App Bar Area (Custom)
-          Row(
+    return BlocBuilder<SettingsCubit, SettingsState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                onPressed: () {}, // Handled by selected index in HomePage
+              const SizedBox(height: 20),
+              // App Bar Area (Custom)
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    onPressed: () {}, // Handled by selected index in HomePage
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        "Configurações",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 48), // Spacer for balance
+                ],
               ),
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    "Configurações",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              const SizedBox(height: 30),
+              _buildProfileCard(theme, colors, state),
+              _buildSectionTitle("Notificações", theme, colors),
+              _buildToggleTile(
+                context: context,
+                icon: Icons.notifications_none_rounded,
+                title: "Lembretes Diários",
+                value: state.dailyReminder,
+                settingKey: 'dailyReminder',
+                colors: colors,
+              ),
+              _buildToggleTile(
+                context: context,
+                icon: Icons.vibration_rounded,
+                title: "Vibração",
+                value: state.vibration,
+                settingKey: 'vibration',
+                colors: colors,
+              ),
+              _buildSectionTitle("Meta de Hidratação", theme, colors),
+              _buildGoalSection(context, theme, colors, state),
+              _buildSectionTitle("Preferências", theme, colors),
+              _buildToggleTile(
+                context: context,
+                icon: Icons.dark_mode_outlined,
+                title: "Tema Visual",
+                value: state.theme == 'dark',
+                settingKey: 'theme',
+                colors: colors,
+              ),
+              const SizedBox(height: 40),
+              OutlinedButton(
+                onPressed: () async {
+                  final authSvc = AuthService(ApiClient());
+                  await authSvc.logout();
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.error,
+                  side: BorderSide(color: colors.error.withValues(alpha: 0.2)),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
+                child: const Text(
+                  "Sair da Conta",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
-              const SizedBox(width: 48), // Spacer for balance
+              const SizedBox(height: 120), // Bottom padding for Nav Bar
             ],
           ),
-          const SizedBox(height: 30),
-          _buildProfileCard(theme, colors),
-          _buildSectionTitle("Notificações", theme, colors),
-          _buildToggleTile(
-            icon: Icons.notifications_none_rounded,
-            title: "Lembretes Diários",
-            value: _controller.dailyReminders,
-            onChanged: (val) =>
-                setState(() => _controller.toggleReminders(val)),
-            colors: colors,
-          ),
-          _buildToggleTile(
-            icon: Icons.vibration_rounded,
-            title: "Vibração",
-            value: _controller.vibration,
-            onChanged: (val) =>
-                setState(() => _controller.toggleVibration(val)),
-            colors: colors,
-          ),
-          _buildSectionTitle("Meta de Hidratação", theme, colors),
-          _buildGoalSection(theme, colors),
-          _buildSectionTitle("Preferências", theme, colors),
-
-          _buildToggleTile(
-            icon: Icons.dark_mode_outlined,
-            title: "Tema Visual",
-            value: _controller.isDarkMode,
-            onChanged: (val) => setState(() => _controller.toggleTheme(val)),
-            colors: colors,
-          ),
-          const SizedBox(height: 40),
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.error,
-              side: BorderSide(color: colors.error.withValues(alpha: 0.2)),
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text(
-              "Sair da Conta",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-          const SizedBox(height: 120), // Bottom padding for Nav Bar
-        ],
-      ),
+        );
+      },
     );
   }
 }

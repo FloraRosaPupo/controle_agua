@@ -8,12 +8,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  dailyGoal Int      @default(2000)
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password      String
+  dailyGoal     Int      @default(2000)
+  theme         String   @default("system")
+  dailyReminder Boolean  @default(true)
+  vibration     Boolean  @default(true)
+  createdAt     DateTime @default(now())
 
   waterLogs WaterLog[]
 }

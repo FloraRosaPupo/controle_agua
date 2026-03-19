@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
-import '../../controllers/home_controller.dart';
 import './widgets/settings_view.dart';
 import './widgets/add_water_button.dart';
+import 'cubit/home_cubit.dart';
+import 'cubit/home_state.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,8 +15,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _controller = HomeController();
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicia carrengando do backend!
+    context.read<HomeCubit>().loadTodayData();
+  }
 
   Widget _buildHeader(ThemeData theme, ColorScheme colors) {
     return Row(
@@ -29,7 +37,9 @@ class _HomePageState extends State<HomePage> {
           ),
           child: const CircleAvatar(
             radius: 24,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=alex'),
+            backgroundImage: NetworkImage(
+              'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+            ), // Profile placeholder
           ),
         ),
         const SizedBox(width: 12),
@@ -37,14 +47,14 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "META ATIVA",
+              "BEM VINDO",
               style: theme.textTheme.bodySmall?.copyWith(
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.bold,
                 color: colors.onSurface.withValues(alpha: 0.5),
               ),
             ),
-            Text(_controller.userName, style: theme.textTheme.titleLarge),
+            Text("Meu Perfil", style: theme.textTheme.titleLarge),
           ],
         ),
         const Spacer(),
@@ -67,7 +77,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCircularProgress(ThemeData theme, ColorScheme colors) {
+  Widget _buildCircularProgress(
+    ThemeData theme,
+    ColorScheme colors,
+    HomeLoaded state,
+  ) {
     return Center(
       child: Stack(
         alignment: Alignment.center,
@@ -92,7 +106,7 @@ class _HomePageState extends State<HomePage> {
             width: 240,
             height: 240,
             child: CircularProgressIndicator(
-              value: _controller.progress,
+              value: state.progress,
               strokeWidth: 12,
               backgroundColor: colors.primary.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
@@ -106,14 +120,14 @@ class _HomePageState extends State<HomePage> {
               Icon(Icons.water_drop, color: colors.primary, size: 32),
               const SizedBox(height: 8),
               Text(
-                "${_controller.currentIntake}",
+                "${state.currentIntake}",
                 style: theme.textTheme.headlineLarge?.copyWith(
                   fontSize: 54,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               Text(
-                "DE ${_controller.dailyGoal}ml",
+                "DE ${state.dailyGoal}ml",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.1,
@@ -134,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 child: Text(
-                  "${_controller.percentage}% DO OBJETIVO",
+                  "${state.percentage}% DO OBJETIVO",
                   style: TextStyle(
                     color: colors.primary,
                     fontWeight: FontWeight.bold,
@@ -168,7 +182,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () => context.read<HomeCubit>().addWater(200),
         icon: const Icon(Icons.add_circle, color: Colors.black),
         label: const Text(
           "Adicionar Água",
@@ -208,34 +222,37 @@ class _HomePageState extends State<HomePage> {
     String unit,
   ) {
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              amount,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colors.primary,
+      child: GestureDetector(
+        onTap: () => context.read<HomeCubit>().addWater(int.parse(amount)),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+          ),
+          child: Column(
+            children: [
+              Text(
+                amount,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colors.primary,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              unit,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface.withValues(alpha: 0.3),
+              const SizedBox(height: 4),
+              Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface.withValues(alpha: 0.3),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -323,28 +340,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHomeContent(ThemeData theme, ColorScheme colors) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 20),
-          _buildHeader(theme, colors),
-          const SizedBox(height: 24),
-          _buildCircularProgress(theme, colors),
-          const SizedBox(height: 50),
-          _buildAddButton(colors),
-          const SizedBox(height: 24),
-          _buildQuickSelect(theme, colors),
-          const SizedBox(height: 40),
-          _buildHistoryHeader(theme, colors),
-          const SizedBox(height: 16),
-          ..._controller.todayHistory.map(
-            (log) => _buildHistoryItem(theme, colors, log),
-          ),
-          const SizedBox(height: 100),
-        ],
-      ),
+    return BlocBuilder<HomeCubit, HomeState>(
+      builder: (context, state) {
+        if (state is HomeInitial || state is HomeLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is HomeError) {
+          return Center(child: Text(state.message));
+        } else if (state is HomeLoaded) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(theme, colors),
+                const SizedBox(height: 24),
+                _buildCircularProgress(theme, colors, state),
+                const SizedBox(height: 50),
+                _buildAddButton(colors),
+                const SizedBox(height: 24),
+                _buildQuickSelect(theme, colors),
+                const SizedBox(height: 40),
+                _buildHistoryHeader(theme, colors),
+                const SizedBox(height: 16),
+                if (state.todayHistory.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Nenhum registro hoje. Respire e beba água!'),
+                    ),
+                  ),
+                ...state.todayHistory.map(
+                  (log) => _buildHistoryItem(theme, colors, log),
+                ),
+                const SizedBox(height: 100),
+              ],
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
@@ -355,7 +390,9 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       extendBody: true,
-      floatingActionButton: AddWaterButton(onPressed: () {}),
+      floatingActionButton: AddWaterButton(
+        onPressed: () => context.read<HomeCubit>().addWater(50),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -423,22 +460,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
-
-@Preview(name: 'Home - Light')
-Widget homePageLightPreview() {
-  return MaterialApp(
-    theme: AppTheme.lightTheme,
-    debugShowCheckedModeBanner: false,
-    home: const HomePage(),
-  );
-}
-
-@Preview(name: 'Home - Dark')
-Widget homePageDarkPreview() {
-  return MaterialApp(
-    theme: AppTheme.darkTheme,
-    debugShowCheckedModeBanner: false,
-    home: const HomePage(),
-  );
 }

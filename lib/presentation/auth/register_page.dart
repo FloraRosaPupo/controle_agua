@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
 import '../../controllers/register_controller.dart';
-import 'login_page.dart';
-import '../home/home_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'cubit/register_cubit.dart';
+import 'cubit/register_state.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -42,277 +44,320 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-
-                // Top Bar: Logo + App Name
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.water_drop,
-                        color: colors.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      "bebeu",
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 40),
-
-                // Headlines
-                Text(
-                  "Comece sua jornada",
-                  style: textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
+          child: BlocListener<RegisterCubit, RegisterState>(
+            listener: (context, state) {
+              if (state is RegisterSuccess) {
+                context.go('/home');
+              } else if (state is RegisterFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.error),
+                    backgroundColor: Colors.red,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Hidrate-se melhor, sinta-se melhor.",
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
+                );
+              }
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
 
-                const SizedBox(height: 40),
-
-                // Form
-                _buildFieldLabel(context, "NOME COMPLETO"),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _controller.nameController,
-                  decoration: InputDecoration(
-                    hintText: "Seu nome",
-                    prefixIcon: Icon(
-                      Icons.person_outline,
-                      color: colors.primary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildFieldLabel(context, "E-MAIL"),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _controller.emailController,
-                  decoration: InputDecoration(
-                    hintText: "seu@email.com",
-                    prefixIcon: Icon(
-                      Icons.alternate_email,
-                      color: colors.primary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildFieldLabel(context, "SENHA"),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _controller.passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    hintText: "••••••••",
-                    prefixIcon: Icon(
-                      Icons.lock_outline,
-                      color: colors.primary.withValues(alpha: 0.5),
-                    ),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible,
-                      ),
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: colors.primary.withValues(alpha: 0.5),
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Initial Goal Card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: colors.primary.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Column(
+                  // Top Bar: Logo + App Name
+                  Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Definir sua meta inicial",
-                                style: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                "Pode ser alterada depois",
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: colors.onSurface.withValues(
-                                    alpha: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.primary,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _controller.formatDailyGoal(_dailyGoal),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: colors.primary,
-                          inactiveTrackColor: colors.primary.withValues(
-                            alpha: 0.1,
-                          ),
-                          thumbColor: colors.primary,
-                          overlayColor: colors.primary.withValues(alpha: 0.2),
-                          trackHeight: 4,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Slider(
-                          value: _dailyGoal,
-                          min: 500,
-                          max: 10000,
-                          divisions: 38, // 250ml steps
-                          onChanged: (value) =>
-                              setState(() => _dailyGoal = value),
+                        child: Icon(
+                          Icons.water_drop,
+                          color: colors.primary,
+                          size: 24,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildSliderLabel("500 ml"),
-                            _buildSliderLabel("5000 ml"),
-                            _buildSliderLabel("10.000 ml"),
-                          ],
+                      const SizedBox(width: 12),
+                      Text(
+                        "bebeu",
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
                         ),
                       ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 40),
 
-                // Register Button
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HomePage()),
-                      (route) => false,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  // Headlines
+                  Text(
+                    "Comece sua jornada",
+                    style: textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
-                    elevation: 8,
-                    shadowColor: colors.primary.withValues(alpha: 0.4),
                   ),
-                  child: const Text(
-                    "Criar Conta",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Hidrate-se melhor, sinta-se melhor.",
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 40),
 
-                // Footer
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Já tem uma conta? ",
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.6),
+                  // Form
+                  _buildFieldLabel(context, "NOME COMPLETO"),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controller.nameController,
+                    decoration: InputDecoration(
+                      hintText: "Seu nome",
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: colors.primary.withValues(alpha: 0.5),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginPage(),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  _buildFieldLabel(context, "E-MAIL"),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controller.emailController,
+                    decoration: InputDecoration(
+                      hintText: "seu@email.com",
+                      prefixIcon: Icon(
+                        Icons.alternate_email,
+                        color: colors.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  _buildFieldLabel(context, "SENHA"),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controller.passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      hintText: "••••••••",
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: colors.primary.withValues(alpha: 0.5),
+                      ),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: colors.primary.withValues(alpha: 0.5),
+                          size: 20,
                         ),
                       ),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                      child: Text(
-                        "Entrar",
-                        style: TextStyle(
-                          color: colors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Initial Goal Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colors.primary.withValues(alpha: 0.1),
                       ),
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                Text(
-                  "Ao se registrar, você concorda com nossos Termos de Serviço e Política de Privacidade.",
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: colors.onSurface.withValues(alpha: 0.4),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Definir sua meta inicial",
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  "Pode ser alterada depois",
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colors.onSurface.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _controller.formatDailyGoal(_dailyGoal),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: colors.primary,
+                            inactiveTrackColor: colors.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            thumbColor: colors.primary,
+                            overlayColor: colors.primary.withValues(alpha: 0.2),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value: _dailyGoal,
+                            min: 500,
+                            max: 10000,
+                            divisions: 38, // 250ml steps
+                            onChanged: (value) =>
+                                setState(() => _dailyGoal = value),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildSliderLabel("500 ml"),
+                              _buildSliderLabel("5000 ml"),
+                              _buildSliderLabel("10.000 ml"),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 32),
+
+                  // Register Button
+                  BlocBuilder<RegisterCubit, RegisterState>(
+                    builder: (context, state) {
+                      return ElevatedButton(
+                        onPressed: state is RegisterLoading
+                            ? null
+                            : () {
+                                final name = _controller.nameController.text
+                                    .trim();
+                                final email = _controller.emailController.text
+                                    .trim();
+                                final pwd = _controller.passwordController.text;
+
+                                if (name.isNotEmpty &&
+                                    email.isNotEmpty &&
+                                    pwd.isNotEmpty) {
+                                  context
+                                      .read<RegisterCubit>()
+                                      .registerAndLogin(
+                                        name,
+                                        email,
+                                        pwd,
+                                        _dailyGoal,
+                                      );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Preencha todos os campos.",
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 8,
+                          shadowColor: colors.primary.withValues(alpha: 0.4),
+                        ),
+                        child: state is RegisterLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                "Criar Conta",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Footer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Já tem uma conta? ",
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        child: Text(
+                          "Entrar",
+                          style: TextStyle(
+                            color: colors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Text(
+                    "Ao se registrar, você concorda com nossos Termos de Serviço e Política de Privacidade.",
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      color: colors.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
