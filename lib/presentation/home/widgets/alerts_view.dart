@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import './notification_settings_view.dart';
+import '../../../../core/services/notification_service.dart';
 
 class AlertsView extends StatelessWidget {
   const AlertsView({super.key});
+
+  void _testNotification(Map<String, dynamic> alert) async {
+    final service = NotificationService();
+    await service.showNotification(
+      id: DateTime.now().millisecond,
+      title: alert["title"] as String,
+      body: alert["message"] as String,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +143,23 @@ class AlertsView extends StatelessWidget {
                                 style: TextStyle(
                                   color: colors.onSurface.withValues(alpha: 0.6),
                                   height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () => _testNotification(alert),
+                                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                  label: const Text("Testar"),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: alert["color"] as Color,
+                                    backgroundColor: (alert["color"] as Color).withValues(alpha: 0.05),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

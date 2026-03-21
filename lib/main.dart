@@ -62,26 +62,28 @@ void main() async {
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => HomeCubit(waterService)),
-            BlocProvider(
-              create: (_) => HistoryCubit(waterService)..loadHistory(),
-            ),
-            BlocProvider(
-              create: (_) => SettingsCubit(settingsService)..loadSettings(),
-            ),
-            BlocProvider(
-              create: (_) => NotificationCubit(settingsService)..loadPreferences(),
-            ),
-          ],
-          child: const HomePage(),
-        ),
+        builder: (context, state) => const HomePage(),
       ),
     ],
   );
 
-  runApp(MyApp(router: router));
+  runApp(
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => HomeCubit(waterService)..loadTodayData()),
+        BlocProvider(
+          create: (_) => HistoryCubit(waterService)..loadHistory(),
+        ),
+        BlocProvider(
+          create: (_) => SettingsCubit(settingsService)..loadSettings(),
+        ),
+        BlocProvider(
+          create: (_) => NotificationCubit(settingsService)..loadPreferences(),
+        ),
+      ],
+      child: MyApp(router: router),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {

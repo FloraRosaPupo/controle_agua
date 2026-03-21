@@ -53,6 +53,7 @@ export async function updateSettings(req: Request, res: Response) {
         // Pega do body os campos que o app enviar (todos são opcionais para o update)
         const { name, dailyGoal, theme, dailyReminder, vibration, notifications } = req.body;
 
+        // Update user fields (without notificationSettings - handled separately)
         const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: {
@@ -61,26 +62,6 @@ export async function updateSettings(req: Request, res: Response) {
                 theme: theme !== undefined ? String(theme) : undefined,
                 dailyReminder: dailyReminder !== undefined ? Boolean(dailyReminder) : undefined,
                 vibration: vibration !== undefined ? Boolean(vibration) : undefined,
-                notificationSettings: notifications ? {
-                    upsert: {
-                        create: {
-                            type: notifications.type || "hourly",
-                            intervalInMinutes: notifications.intervalInMinutes || 60,
-                            daysOfWeek: notifications.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
-                            startTime: notifications.startTime || "08:00",
-                            endTime: notifications.endTime || "22:00",
-                            enabled: notifications.enabled !== undefined ? notifications.enabled : true,
-                        },
-                        update: {
-                            type: notifications.type,
-                            intervalInMinutes: notifications.intervalInMinutes,
-                            daysOfWeek: notifications.daysOfWeek,
-                            startTime: notifications.startTime,
-                            endTime: notifications.endTime,
-                            enabled: notifications.enabled,
-                        }
-                    }
-                } : undefined
             },
             select: {
                 name: true,
@@ -89,15 +70,44 @@ export async function updateSettings(req: Request, res: Response) {
                 theme: true,
                 dailyReminder: true,
                 vibration: true,
-                notificationSettings: true,
             }
         });
+
+        // Handle notification settings separately with upsert
+        let notificationSettings = null;
+        if (notifications) {
+            notificationSettings = await prisma.notificationSetting.upsert({
+                where: { userId },
+                create: {
+                    userId,
+                    type: notifications.type || "hourly",
+                    intervalInMinutes: notifications.intervalInMinutes || 60,
+                    daysOfWeek: notifications.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+                    startTime: notifications.startTime || "08:00",
+                    endTime: notifications.endTime || "22:00",
+                    enabled: notifications.enabled !== undefined ? notifications.enabled : true,
+                },
+                update: {
+                    type: notifications.type,
+                    intervalInMinutes: notifications.intervalInMinutes,
+                    daysOfWeek: notifications.daysOfWeek,
+                    startTime: notifications.startTime,
+                    endTime: notifications.endTime,
+                    enabled: notifications.enabled,
+                },
+            });
+        } else {
+            // Fetch existing notification settings
+            notificationSettings = await prisma.notificationSetting.findUnique({
+                where: { userId },
+            });
+        }
 
         res.json({ 
             message: "Configurações atualizadas!", 
             user: {
                 ...updatedUser,
-                notificationSettings: updatedUser.notificationSettings
+                notificationSettings: notificationSettings,
             } 
         });
     } catch (error) {
