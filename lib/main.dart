@@ -15,6 +15,8 @@ import 'presentation/auth/login_page.dart';
 import 'presentation/auth/register_page.dart';
 import 'presentation/home/home_page.dart';
 import 'presentation/home/cubit/home_cubit.dart';
+import 'presentation/home/cubit/history_cubit.dart';
+import 'presentation/home/widgets/history_view.dart';
 import 'presentation/auth/cubit/login_cubit.dart';
 import 'presentation/auth/cubit/register_cubit.dart';
 import 'presentation/home/cubit/settings_cubit.dart';
@@ -58,6 +60,9 @@ void main() async {
         builder: (context, state) => MultiBlocProvider(
           providers: [
             BlocProvider(create: (_) => HomeCubit(waterService)),
+            BlocProvider(
+              create: (_) => HistoryCubit(waterService)..loadHistory(),
+            ),
             BlocProvider(
               create: (_) => SettingsCubit(settingsService)..loadSettings(),
             ),

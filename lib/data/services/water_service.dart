@@ -34,4 +34,20 @@ class WaterService {
       );
     }
   }
+  Future<Map<String, dynamic>?> getHistory({String period = '7d', String? date}) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/water/history',
+        queryParameters: date != null ? {'date': date} : {'period': period},
+      );
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } on DioException catch (e) {
+      throw Exception(
+        'Erro ao buscar histórico: ${e.response?.data['error'] ?? e.message}',
+      );
+    }
+  }
 }
