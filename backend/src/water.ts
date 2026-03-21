@@ -60,7 +60,11 @@ export async function history(req: AuthRequest, res: Response) {
         select: { dailyGoal: true }
     })
 
-    const dailyGoal = user?.dailyGoal || 2000
+    if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" })
+    }
+
+    const dailyGoal = user.dailyGoal
 
     // Cálculo de estatísticas
     const logsByDay: { [key: string]: number } = {}
@@ -106,7 +110,11 @@ export async function today(req: AuthRequest, res: Response) {
         select: { dailyGoal: true }
     })
 
-    const dailyGoal = user?.dailyGoal || 2000
+    if (!user) {
+        return res.status(404).json({ error: "Usuário não encontrado" })
+    }
+
+    const dailyGoal = user.dailyGoal
     const remaining = Math.max(0, dailyGoal - total)
 
     res.json({

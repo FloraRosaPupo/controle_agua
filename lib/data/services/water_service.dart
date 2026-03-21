@@ -41,19 +41,6 @@ class WaterService {
         queryParameters: date != null ? {'date': date} : {'period': period},
       );
       if (response.statusCode == 200) {
-        // Se a resposta for uma Lista (bug de cache/versão antiga no backend), 
-        // a gente encapsula num mapa para não quebrar o frontend.
-        if (response.data is List) {
-          return {
-            'logs': response.data,
-            'dailyGoal': 2000,
-            'stats': {
-              'average': 0,
-              'goalsMet': 0,
-              'totalDays': period == '30d' ? 30 : 7,
-            }
-          };
-        }
         return response.data;
       }
       return null;
