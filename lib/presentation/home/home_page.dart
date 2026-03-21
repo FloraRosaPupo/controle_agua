@@ -4,10 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // import '../../core/theme/app_theme.dart';
 import './widgets/settings_view.dart';
 import './widgets/add_water_button.dart';
+import './widgets/history_view.dart';
+import './widgets/alerts_view.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 import 'cubit/history_cubit.dart';
-import './widgets/history_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -388,7 +389,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildHomeContent(theme, colors),
             const HistoryView(),
-            const Center(child: Text("Alertas")), // Placeholder
+            const AlertsView(),
             const SettingsView(),
           ],
         ),

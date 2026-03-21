@@ -1,10 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/services/water_service.dart';
 import '../../../core/services/widget_service.dart';
+import '../../../core/services/notification_service.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   final WaterService _waterService;
+  final NotificationService _notificationService = NotificationService();
 
   HomeCubit(this._waterService) : super(HomeInitial());
 
@@ -46,6 +48,12 @@ class HomeCubit extends Cubit<HomeState> {
             todayHistory: todayHistory,
           ),
         );
+
+        _notificationService.checkProgressAndNotify(
+          current: currentIntake,
+          goal: dailyGoal,
+          userName: data.name,
+        );
       } else {
         emit(HomeError("Nenhum dado retornado da API."));
       }
@@ -85,6 +93,12 @@ class HomeCubit extends Cubit<HomeState> {
           percentage: (progress * 100).toInt(),
           todayHistory: optimisticHistory,
         ),
+      );
+
+      _notificationService.checkProgressAndNotify(
+        current: optimisticIntake,
+        goal: currentState.dailyGoal,
+        userName: currentState.userName,
       );
 
       try {

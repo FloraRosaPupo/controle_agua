@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/widget_service.dart';
 import 'core/api/api_client.dart';
+import 'core/services/notification_service.dart';
 
 import 'data/services/water_service.dart';
 import 'data/services/auth_service.dart';
@@ -20,11 +21,15 @@ import 'presentation/home/widgets/history_view.dart';
 import 'presentation/auth/cubit/login_cubit.dart';
 import 'presentation/auth/cubit/register_cubit.dart';
 import 'presentation/home/cubit/settings_cubit.dart';
+import 'presentation/home/cubit/notification_cubit.dart';
 import 'data/services/settings_service.dart';
 import 'package:flutter/foundation.dart'; // import para kIsWeb
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final notificationService = NotificationService();
+  await notificationService.initialize();
 
   if (!kIsWeb) {
     WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
@@ -65,6 +70,9 @@ void main() async {
             ),
             BlocProvider(
               create: (_) => SettingsCubit(settingsService)..loadSettings(),
+            ),
+            BlocProvider(
+              create: (_) => NotificationCubit(settingsService)..loadPreferences(),
             ),
           ],
           child: const HomePage(),

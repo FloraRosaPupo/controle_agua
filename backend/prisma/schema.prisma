@@ -18,7 +18,20 @@ model User {
   vibration     Boolean  @default(true)
   createdAt     DateTime @default(now())
 
-  waterLogs WaterLog[]
+  waterLogs            WaterLog[]
+  notificationSettings NotificationSetting?
+}
+
+model NotificationSetting {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  type              String   @default("hourly") // hourly, daily, custom
+  intervalInMinutes Int      @default(60)
+  daysOfWeek        Int[]    @default([0, 1, 2, 3, 4, 5, 6]) // 0=Sunday, 1=Monday...
+  startTime         String   @default("08:00")
+  endTime           String   @default("22:00")
+  enabled           Boolean  @default(true)
 }
 
 model WaterLog {
