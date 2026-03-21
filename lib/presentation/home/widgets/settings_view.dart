@@ -184,7 +184,7 @@ class SettingsView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  "\${state.dailyGoal.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '\${m[1]}.')} ml",
+                  "${state.dailyGoal.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} ml",
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

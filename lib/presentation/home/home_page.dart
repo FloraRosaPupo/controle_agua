@@ -6,6 +6,8 @@ import './widgets/settings_view.dart';
 import './widgets/add_water_button.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
+import 'cubit/history_cubit.dart';
+import './widgets/history_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -417,7 +419,7 @@ class _HomePageState extends State<HomePage> {
           index: _selectedIndex,
           children: [
             _buildHomeContent(theme, colors),
-            const Center(child: Text("Histórico")), // Placeholder
+            const HistoryView(),
             const Center(child: Text("Alertas")), // Placeholder
             const SettingsView(),
           ],
@@ -434,7 +436,12 @@ class _HomePageState extends State<HomePage> {
   ) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        if (index == 1) {
+          context.read<HistoryCubit>().loadHistory();
+        }
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
