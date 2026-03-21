@@ -35,6 +35,7 @@ class HistoryView extends StatelessWidget {
                 _buildChartSection(theme, colors, state),
                 const SizedBox(height: 32),
                 _buildDailyLogs(theme, colors, state),
+                const SizedBox(height: 100),
               ],
             ),
           );

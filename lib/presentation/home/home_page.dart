@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/widget_previews.dart';
-import '../../core/theme/app_theme.dart';
+// import 'package:flutter/widget_previews.dart';
+// import '../../core/theme/app_theme.dart';
 import './widgets/settings_view.dart';
 import './widgets/add_water_button.dart';
 import 'cubit/home_cubit.dart';
@@ -26,30 +26,14 @@ class _HomePageState extends State<HomePage> {
     context.read<HomeCubit>().loadTodayData();
   }
 
-  Widget _buildHeader(ThemeData theme, ColorScheme colors) {
+  Widget _buildHeader(ThemeData theme, ColorScheme colors, String name) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [colors.primary, colors.primary.withValues(alpha: 0.3)],
-            ),
-          ),
-          child: const CircleAvatar(
-            radius: 24,
-            backgroundImage: NetworkImage(
-              'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-            ), // Profile placeholder
-          ),
-        ),
-        const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "BEM VINDO",
+              "BEM VINDO ${name.toUpperCase()}",
               style: theme.textTheme.bodySmall?.copyWith(
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.bold,
@@ -58,22 +42,6 @@ class _HomePageState extends State<HomePage> {
             ),
             Text("Meu Perfil", style: theme.textTheme.titleLarge),
           ],
-        ),
-        const Spacer(),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.onSurface.withValues(alpha: 0.1)),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.calendar_today_rounded,
-              size: 20,
-              color: colors.onSurface,
-            ),
-            onPressed: () {},
-          ),
         ),
       ],
     );
@@ -355,7 +323,7 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                _buildHeader(theme, colors),
+                _buildHeader(theme, colors, state.userName),
                 const SizedBox(height: 24),
                 _buildCircularProgress(theme, colors, state),
                 const SizedBox(height: 50),

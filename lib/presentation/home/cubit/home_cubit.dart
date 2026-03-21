@@ -40,6 +40,7 @@ class HomeCubit extends Cubit<HomeState> {
           HomeLoaded(
             currentIntake: currentIntake,
             dailyGoal: dailyGoal,
+            userName: data.name,
             progress: progress,
             percentage: percentage,
             todayHistory: todayHistory,
@@ -79,6 +80,7 @@ class HomeCubit extends Cubit<HomeState> {
         HomeLoaded(
           currentIntake: optimisticIntake,
           dailyGoal: currentState.dailyGoal,
+          userName: currentState.userName,
           progress: progress,
           percentage: (progress * 100).toInt(),
           todayHistory: optimisticHistory,
