@@ -28,18 +28,61 @@ export async function addWater(req: AuthRequest, res: Response) {
 
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
+    const { period, date } = req.query
 
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    let startDate = new Date()
+    let endDate = new Date()
+
+    if (date) {
+        startDate = new Date(date as string)
+        startDate.setHours(0, 0, 0, 0)
+        endDate = new Date(date as string)
+        endDate.setHours(23, 59, 59, 999)
+    } else {
+        const days = period === '30d' ? 30 : 7
+        startDate.setDate(startDate.getDate() - days)
+        startDate.setHours(0, 0, 0, 0)
+    }
 
     const logs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
-            date: { gte: sevenDaysAgo }
-        }
+            date: {
+                gte: startDate,
+                lte: endDate
+            }
+        },
+        orderBy: { date: 'desc' }
     })
 
-    res.json(logs)
+    const user = await prisma.user.findUnique({
+        where: { id: userId! },
+        select: { dailyGoal: true }
+    })
+
+    const dailyGoal = user?.dailyGoal || 2000
+
+    // Cálculo de estatísticas
+    const logsByDay: { [key: string]: number } = {}
+    logs.forEach(log => {
+        const day = log.date.toISOString().split('T')[0]
+        logsByDay[day] = (logsByDay[day] || 0) + log.amount
+    })
+
+    const daysCount = Object.keys(logsByDay).length || 1
+    const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
+    const average = Math.round(totalIntake / (period === '30d' ? 30 : 7))
+    const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
+
+    res.json({
+        logs,
+        dailyGoal,
+        stats: {
+            average,
+            goalsMet,
+            totalDays: period === '30d' ? 30 : 7
+        }
+    })
 }
 
 export async function today(req: AuthRequest, res: Response) {
