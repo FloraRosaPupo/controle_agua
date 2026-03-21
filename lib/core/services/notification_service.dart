@@ -30,7 +30,12 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notificationsPlugin.initialize(initSettings);
+    await _notificationsPlugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (details) {
+        // Handle notification tap
+      },
+    );
   }
 
   Future<void> showNotification({
@@ -52,7 +57,12 @@ class NotificationService {
       iOS: DarwinNotificationDetails(),
     );
 
-    await _notificationsPlugin.show(id, title, body, details);
+    await _notificationsPlugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 
   Future<void> scheduleHydrationReminders(NotificationPreferences prefs) async {
@@ -93,19 +103,17 @@ class NotificationService {
 
         if (scheduleTime.isAfter(now)) {
           await _notificationsPlugin.zonedSchedule(
-            i * 100 + hour,
-            'Hora de beber água!',
-            'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
-            tz.TZDateTime.from(scheduleTime, tz.local),
-            const NotificationDetails(
+            id: i * 100 + hour,
+            title: 'Hora de beber água!',
+            body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
+            scheduledDate: tz.TZDateTime.from(scheduleTime, tz.local),
+            notificationDetails: const NotificationDetails(
               android: AndroidNotificationDetails(
                 'hydration_reminders',
                 'Lembretes Periódicos',
                 importance: Importance.low,
               ),
             ),
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
             matchDateTimeComponents: DateTimeComponents.time,
           );
