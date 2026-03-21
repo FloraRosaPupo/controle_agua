@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
+import '../../data/services/auth_service.dart';
+import '../../core/api/api_client.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -209,7 +211,10 @@ Widget loginPageLightPreview() {
   return MaterialApp(
     theme: AppTheme.lightTheme,
     debugShowCheckedModeBanner: false,
-    home: const LoginPage(),
+    home: BlocProvider(
+      create: (_) => LoginCubit(AuthService(ApiClient())),
+      child: const LoginPage(),
+    ),
   );
 }
 
@@ -218,6 +223,9 @@ Widget loginPageDarkPreview() {
   return MaterialApp(
     theme: AppTheme.darkTheme,
     debugShowCheckedModeBanner: false,
-    home: const LoginPage(),
+    home: BlocProvider(
+      create: (_) => LoginCubit(AuthService(ApiClient())),
+      child: const LoginPage(),
+    ),
   );
 }
