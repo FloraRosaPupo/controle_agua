@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/home_widget_interactive.dart';
 import 'core/services/widget_service.dart';
 import 'core/api/api_client.dart';
 import 'core/services/notification_service.dart';
@@ -27,6 +28,8 @@ import 'package:flutter/foundation.dart'; // import para kIsWeb
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await HomeWidget.registerInteractivityCallback(homeWidgetInteractiveCallback);
 
   final notificationService = NotificationService();
   await notificationService.initialize();

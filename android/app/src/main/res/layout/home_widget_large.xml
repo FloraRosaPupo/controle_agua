@@ -6,7 +6,6 @@
     android:background="@android:color/transparent"
     android:padding="12dp">
 
-    <!-- Conteúdo padrão: mostra ao instalar, antes do app rodar -->
     <LinearLayout
         android:id="@+id/widget_default"
         android:layout_width="match_parent"
@@ -17,16 +16,17 @@
         android:visibility="visible">
 
         <LinearLayout
+            android:id="@+id/widget_header_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:src="@drawable/ic_water_drop"
-                android:contentDescription="Agua" />
+                android:contentDescription="@null"
+                android:src="@drawable/ic_water_drop" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -45,47 +45,54 @@
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:src="@android:drawable/ic_menu_more"
-                android:contentDescription="Mais"
-                android:alpha="0.5" />
+                android:alpha="0.5"
+                android:contentDescription="@null"
+                android:src="@android:drawable/ic_menu_more" />
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/widget_stats_block"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/widget_intake"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="0 ml / 2.000 ml"
-                android:textColor="#B3000000"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/widget_percent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0%"
-                android:textColor="#99000000"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/widget_intake"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0 ml / 2.000 ml"
+                    android:textColor="#B3000000"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_percent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0%"
+                    android:textColor="#99000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/widget_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="12dp"
+                android:indeterminate="false"
+                android:max="100"
+                android:progress="0" />
         </LinearLayout>
-
-        <ProgressBar
-            android:id="@+id/widget_progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_marginTop="12dp"
-            android:max="100"
-            android:progress="0"
-            android:indeterminate="false" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -94,41 +101,41 @@
             android:gravity="center" />
 
         <LinearLayout
+            android:id="@+id/widget_add_area"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:orientation="horizontal"
+            android:background="@drawable/widget_button_bg"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingStart="16dp"
-            android:paddingEnd="16dp"
             android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:background="@drawable/widget_button_bg">
+            android:paddingEnd="16dp"
+            android:paddingBottom="6dp">
 
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
-                android:src="@android:drawable/ic_input_add"
-                android:contentDescription="Adicionar" />
+                android:contentDescription="@null"
+                android:src="@android:drawable/ic_input_add" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="200ml"
+                android:text="+ 50 ml"
                 android:textColor="#2196F3"
                 android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Imagem renderizada pelo Flutter: quando disponível -->
     <ImageView
         android:id="@+id/widget_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@null"
         android:scaleType="fitCenter"
-        android:contentDescription="Home Widget"
         android:visibility="gone" />
 
 </FrameLayout>

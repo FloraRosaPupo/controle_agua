@@ -6,37 +6,56 @@
     android:background="@android:color/transparent"
     android:padding="12dp">
 
-    <!-- Conteúdo padrão: mostra ao instalar -->
     <LinearLayout
         android:id="@+id/widget_default"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/widget_card_bg"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:padding="20dp"
-        android:gravity="center"
+        android:padding="16dp"
         android:visibility="visible">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/widget_open_block"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center"
+            android:orientation="vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_water_drop"
-                android:contentDescription="Água" />
-
-            <TextView
-                android:id="@+id/widget_percent"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="0%"
-                android:textColor="#1A1A1A"
-                android:textSize="22sp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_water_drop" />
+
+                <TextView
+                    android:id="@+id/widget_percent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="0%"
+                    android:textColor="#1A1A1A"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/widget_intake_line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:maxLines="2"
+                android:text="0 / 2.000 ml"
+                android:textColor="#99040506"
+                android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -46,6 +65,7 @@
             android:layout_weight="1" />
 
         <FrameLayout
+            android:id="@+id/widget_add_area"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:background="@drawable/widget_small_button_bg">
@@ -54,8 +74,8 @@
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:layout_gravity="center"
-                android:src="@android:drawable/ic_input_add"
-                android:contentDescription="Adicionar" />
+                android:contentDescription="@null"
+                android:src="@android:drawable/ic_input_add" />
         </FrameLayout>
 
         <View
@@ -64,13 +84,12 @@
             android:layout_weight="1" />
     </LinearLayout>
 
-    <!-- Imagem renderizada pelo Flutter -->
     <ImageView
         android:id="@+id/widget_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@null"
         android:scaleType="fitCenter"
-        android:contentDescription="Home Widget Small"
         android:visibility="gone" />
 
 </FrameLayout>

@@ -145,7 +145,7 @@ class HomeWidgetLarge extends StatelessWidget {
                         Icon(Icons.add, color: Colors.blue, size: 16),
                         SizedBox(width: 4),
                         Text(
-                          "200ml",
+                          "+ 50 ml",
                           style: TextStyle(
                             color: Colors.blue,
                             fontWeight: FontWeight.bold,
