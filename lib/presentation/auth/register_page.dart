@@ -250,10 +250,10 @@ class _RegisterPageState extends State<RegisterPage> {
                             trackHeight: 4,
                           ),
                           child: Slider(
-                            value: _dailyGoal,
+                            value: _dailyGoal.clamp(500.0, 5000.0),
                             min: 500,
-                            max: 10000,
-                            divisions: 38, // 250ml steps
+                            max: 5000,
+                            divisions: 18, // passos de 250 ml (4500 / 250)
                             onChanged: (value) =>
                                 setState(() => _dailyGoal = value),
                           ),
@@ -264,8 +264,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _buildSliderLabel("500 ml"),
-                              _buildSliderLabel("5000 ml"),
-                              _buildSliderLabel("10.000 ml"),
+                              _buildSliderLabel("2.750 ml"),
+                              _buildSliderLabel("5.000 ml"),
                             ],
                           ),
                         ),
@@ -333,8 +333,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                   const SizedBox(height: 8),
                                   Text(
                                     _loadingSeconds == 0
-                                        ? 'Conectando …'
-                                        : 'Conectando…',
+                                        ? 'Carregando'
+                                        : 'Carregando',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.white,

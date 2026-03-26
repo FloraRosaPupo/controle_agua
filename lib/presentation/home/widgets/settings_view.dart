@@ -3,7 +3,6 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../cubit/settings_cubit.dart';
-import '../../auth/login_page.dart'; // para logout fallback ou usar go_router
 import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart'; // Caso precise limpar o token etc (ou melhor chamar AuthService)
 import '../../../data/services/auth_service.dart';
@@ -185,15 +184,15 @@ class SettingsView extends StatelessWidget {
               trackHeight: 4,
             ),
             child: Slider(
-              value: state.dailyGoal.clamp(500.0, 10000.0),
+              value: state.dailyGoal.clamp(500.0, 5000.0),
               min: 500,
-              max: 10000,
-              divisions: 38,
+              max: 5000,
+              divisions: 18,
+              onChanged: (value) {
+                context.read<SettingsCubit>().slideDailyGoal(value);
+              },
               onChangeEnd: (value) {
                 context.read<SettingsCubit>().updateSetting('dailyGoal', value);
-              },
-              onChanged: (value) {
-                // Aqui podemos se quiser só atualizar localmente, mas onChangeEnd bate na api.
               },
             ),
           ),
@@ -203,8 +202,8 @@ class SettingsView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSliderLabel("500 ml", colors),
+                _buildSliderLabel("2.750 ml", colors),
                 _buildSliderLabel("5.000 ml", colors),
-                _buildSliderLabel("10.000 ml", colors),
               ],
             ),
           ),

@@ -54,6 +54,28 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
+      // Canais com importância alta para aparecer na lock screen e com tela apagada
+      // (cada id cria canal novo; trocar id força upgrade se o usuário tinha canal antigo).
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'bebeu_water_now',
+          'Lembretes de Hidratação',
+          description: 'Alertas na hora e meta do dia',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'bebeu_hydration_scheduled',
+          'Lembretes programados',
+          description: 'Horários que você definiu em Alertas',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
     }
   }
 
@@ -66,11 +88,14 @@ class NotificationService {
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      'water_reminders',
+      // Novo id de canal: canais antigos com importância baixa não atualizam sozinhos.
+      'bebeu_water_now',
       'Lembretes de Hidratação',
       channelDescription: 'Notificações para beber água',
       importance: Importance.max,
       priority: Priority.high,
+      visibility: NotificationVisibility.public,
+      showWhen: true,
     );
 
     const NotificationDetails details = NotificationDetails(
@@ -133,11 +158,15 @@ class NotificationService {
             scheduledDate: tz.TZDateTime.from(scheduleTime, tz.local),
             notificationDetails: const NotificationDetails(
               android: AndroidNotificationDetails(
-                'hydration_reminders',
+                'bebeu_hydration_scheduled',
                 'Lembretes Periódicos',
                 channelDescription: 'Lembretes para beber água ao longo do dia',
-                importance: Importance.low,
-                priority: Priority.low,
+                importance: Importance.high,
+                priority: Priority.high,
+                visibility: NotificationVisibility.public,
+                showWhen: true,
+                enableVibration: true,
+                playSound: true,
               ),
               iOS: DarwinNotificationDetails(
                 presentAlert: true,
@@ -145,7 +174,10 @@ class NotificationService {
                 presentSound: true,
               ),
             ),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            // Alarmes exatos exigem permissão extra no Android 12+ e falham com
+            // PlatformException(exact_alarms_not_permitted) em muitos APKs.
+            // Inexato ainda entrega lembretes (pode haver pequeno atraso pelo sistema).
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           );
         }
       }

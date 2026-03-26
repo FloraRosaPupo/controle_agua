@@ -20,6 +20,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
+  /// Volume do toque rápido no FAB central (feedback "+ N ml" usa o mesmo valor).
+  static const int _fabQuickAddMl = 50;
+
   @override
   void initState() {
     super.initState();
@@ -362,7 +365,9 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       extendBody: true,
       floatingActionButton: AddWaterButton(
-        onPressed: () => context.read<HomeCubit>().addWater(50),
+        milliliters: _fabQuickAddMl,
+        onPressed: () =>
+            context.read<HomeCubit>().addWater(_fabQuickAddMl),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -407,7 +412,9 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedIndex = index);
-        if (index == 1) {
+        if (index == 0) {
+          context.read<HomeCubit>().refreshTodayData();
+        } else if (index == 1) {
           context.read<HistoryCubit>().loadHistory();
         }
       },

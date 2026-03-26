@@ -193,8 +193,8 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 8),
                                     Text(
                                       _loadingSeconds == 0
-                                          ? 'Conectando …'
-                                          : 'Conectando…',
+                                          ? 'Carregando'
+                                          : 'Carregando',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.white,

@@ -48,6 +48,12 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   SettingsCubit(this._settingsService) : super(SettingsState());
 
+  static const double _dailyGoalMin = 500;
+  static const double _dailyGoalMax = 5000;
+
+  double _clampDailyGoal(double v) =>
+      v.clamp(_dailyGoalMin, _dailyGoalMax);
+
   void _applyTheme(String themeString) {
     if (themeString == 'dark') {
       AppTheme.themeMode.value = ThemeMode.dark;
@@ -69,7 +75,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         state.copyWith(
           name: data['name'] ?? '',
           email: data['email'] ?? '',
-          dailyGoal: (data['dailyGoal'] ?? 2000).toDouble(),
+          dailyGoal: _clampDailyGoal((data['dailyGoal'] ?? 2000).toDouble()),
           theme: themeStr,
           dailyReminder: data['dailyReminder'] ?? true,
           vibration: data['vibration'] ?? true,
@@ -80,6 +86,11 @@ class SettingsCubit extends Cubit<SettingsState> {
       debugPrint("Erro loadSettings: \$e");
       emit(state.copyWith(isLoading: false));
     }
+  }
+
+  /// Atualiza só o estado local enquanto o usuário arrasta o slider (sem API).
+  void slideDailyGoal(double value) {
+    emit(state.copyWith(dailyGoal: _clampDailyGoal(value)));
   }
 
   Future<void> updateSetting(String key, dynamic value) async {
@@ -93,13 +104,17 @@ class SettingsCubit extends Cubit<SettingsState> {
     } else if (key == 'vibration') {
       emit(state.copyWith(vibration: value as bool));
     } else if (key == 'dailyGoal') {
-      emit(state.copyWith(dailyGoal: (value as num).toDouble()));
+      emit(state.copyWith(
+        dailyGoal: _clampDailyGoal((value as num).toDouble()),
+      ));
     } else if (key == 'name') {
       emit(state.copyWith(name: value as String));
     }
 
     try {
-      await _settingsService.updateSettings({key: value});
+      final payloadValue =
+          key == 'dailyGoal' ? _clampDailyGoal((value as num).toDouble()) : value;
+      await _settingsService.updateSettings({key: payloadValue});
     } catch (e) {
       debugPrint("Erro updateSetting \$key: \$e");
       // Revert optimistic update
