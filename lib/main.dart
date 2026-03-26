@@ -3,6 +3,7 @@ import 'package:flutter/widget_previews.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/services/widget_service.dart';
@@ -17,7 +18,6 @@ import 'presentation/auth/register_page.dart';
 import 'presentation/home/home_page.dart';
 import 'presentation/home/cubit/home_cubit.dart';
 import 'presentation/home/cubit/history_cubit.dart';
-import 'presentation/home/widgets/history_view.dart';
 import 'presentation/auth/cubit/login_cubit.dart';
 import 'presentation/auth/cubit/register_cubit.dart';
 import 'presentation/home/cubit/settings_cubit.dart';
@@ -68,20 +68,25 @@ void main() async {
   );
 
   runApp(
-    MultiBlocProvider(
+    MultiProvider(
       providers: [
-        BlocProvider(create: (_) => HomeCubit(waterService)..loadTodayData()),
-        BlocProvider(
-          create: (_) => HistoryCubit(waterService)..loadHistory(),
-        ),
-        BlocProvider(
-          create: (_) => SettingsCubit(settingsService)..loadSettings(),
-        ),
-        BlocProvider(
-          create: (_) => NotificationCubit(settingsService)..loadPreferences(),
-        ),
+        RepositoryProvider<AuthService>.value(value: authService),
       ],
-      child: MyApp(router: router),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => HomeCubit(waterService)..loadTodayData()),
+          BlocProvider(
+            create: (_) => HistoryCubit(waterService)..loadHistory(),
+          ),
+          BlocProvider(
+            create: (_) => SettingsCubit(settingsService)..loadSettings(),
+          ),
+          BlocProvider(
+            create: (_) => NotificationCubit(settingsService)..loadPreferences(),
+          ),
+        ],
+        child: MyApp(router: router),
+      ),
     ),
   );
 }

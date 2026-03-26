@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_theme.dart';
-import '../cubit/settings_cubit.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/api/api_client.dart'; // Caso precise limpar o token etc (ou melhor chamar AuthService)
+import '../../../core/theme/app_theme.dart';
+import '../../../core/api/api_client.dart';
 import '../../../data/services/auth_service.dart';
+import '../cubit/settings_cubit.dart';
+import 'change_password_dialog.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -212,6 +213,56 @@ class SettingsView extends StatelessWidget {
     );
   }
 
+  Widget _buildAccountButton({
+    required BuildContext context,
+    required ColorScheme colors,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: colors.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.onSurface.withValues(alpha: 0.35),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSliderLabel(String label, ColorScheme colors) {
     return Text(
       label,
@@ -277,11 +328,22 @@ class SettingsView extends StatelessWidget {
                 settingKey: 'theme',
                 colors: colors,
               ),
+              const SizedBox(height: 24),
+              _buildSectionTitle("Conta", theme, colors),
+              _buildAccountButton(
+                context: context,
+                colors: colors,
+                icon: Icons.lock_outline_rounded,
+                label: 'Alterar senha',
+                onTap: () => showChangePasswordDialog(
+                  context,
+                  context.read<AuthService>(),
+                ),
+              ),
               const SizedBox(height: 40),
               OutlinedButton(
                 onPressed: () async {
-                  final authSvc = AuthService(ApiClient());
-                  await authSvc.logout();
+                  await context.read<AuthService>().logout();
                   if (context.mounted) {
                     context.go('/login');
                   }
@@ -313,7 +375,10 @@ Widget settingsViewLightPreview() {
   return MaterialApp(
     theme: AppTheme.lightTheme,
     debugShowCheckedModeBanner: false,
-    home: const Scaffold(body: SafeArea(child: SettingsView())),
+    home: RepositoryProvider<AuthService>(
+      create: (_) => AuthService(ApiClient()),
+      child: const Scaffold(body: SafeArea(child: SettingsView())),
+    ),
   );
 }
 
@@ -322,6 +387,9 @@ Widget settingsViewDarkPreview() {
   return MaterialApp(
     theme: AppTheme.darkTheme,
     debugShowCheckedModeBanner: false,
-    home: const Scaffold(body: SafeArea(child: SettingsView())),
+    home: RepositoryProvider<AuthService>(
+      create: (_) => AuthService(ApiClient()),
+      child: const Scaffold(body: SafeArea(child: SettingsView())),
+    ),
   );
 }

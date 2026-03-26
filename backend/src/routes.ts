@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken"
 import { register, login } from "./auth"
 import { addWater, history, today } from "./water"
-import { getSettings, updateSettings } from "./settings"
+import { getSettings, updateSettings, changePassword } from "./settings"
 import { Router, Request, Response, NextFunction } from "express"
 
 import { AuthRequest } from "./types"
@@ -32,5 +32,6 @@ router.get("/water/today", authMiddleware, today)
 
 router.get("/settings", authMiddleware, getSettings)
 router.put("/settings", authMiddleware, updateSettings)
+router.put("/settings/password", authMiddleware, changePassword)
 
 export default router

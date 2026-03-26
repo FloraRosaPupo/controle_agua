@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import bcrypt from "bcrypt";
 import { prisma } from "./prisma";
 import { AuthRequest } from "./types";
 
@@ -113,5 +114,44 @@ export async function updateSettings(req: Request, res: Response) {
     } catch (error) {
         console.error("Erro ao atualizar configurações:", error);
         res.status(500).json({ error: "Erro interno ao atualizar configurações" });
+    }
+}
+
+export async function changePassword(req: Request, res: Response) {
+    try {
+        const userId = (req as AuthRequest).userId;
+        if (!userId) {
+            return res.status(401).json({ error: "Usuário não autenticado" });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+        }
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ error: "Usuário não encontrado" });
+        }
+
+        const valid = await bcrypt.compare(currentPassword, user.password);
+        if (!valid) {
+            return res.status(400).json({ error: "Senha atual incorreta" });
+        }
+
+        const hash = await bcrypt.hash(String(newPassword), 10);
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hash },
+        });
+
+        res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+        console.error("Erro ao alterar senha:", error);
+        res.status(500).json({ error: "Erro interno ao alterar senha" });
     }
 }

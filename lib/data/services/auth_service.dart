@@ -75,4 +75,28 @@ class AuthService {
     }
     return false;
   }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.dio.put(
+        '/settings/password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Não foi possível alterar a senha');
+      }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final msg = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'Erro ao alterar senha';
+      throw Exception(msg);
+    }
+  }
 }

@@ -30,4 +30,5 @@ router.get("/water/history", authMiddleware, water_1.history);
 router.get("/water/today", authMiddleware, water_1.today);
 router.get("/settings", authMiddleware, settings_1.getSettings);
 router.put("/settings", authMiddleware, settings_1.updateSettings);
+router.put("/settings/password", authMiddleware, settings_1.changePassword);
 exports.default = router;

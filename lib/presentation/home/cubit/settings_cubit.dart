@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../data/services/settings_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/services/notification_service.dart';
 
 class SettingsState {
   final String name;
@@ -82,6 +83,7 @@ class SettingsCubit extends Cubit<SettingsState> {
           isLoading: false,
         ),
       );
+      await NotificationService().setVibrationEnabled(state.vibration);
     } catch (e) {
       debugPrint("Erro loadSettings: \$e");
       emit(state.copyWith(isLoading: false));
@@ -115,12 +117,18 @@ class SettingsCubit extends Cubit<SettingsState> {
       final payloadValue =
           key == 'dailyGoal' ? _clampDailyGoal((value as num).toDouble()) : value;
       await _settingsService.updateSettings({key: payloadValue});
+      if (key == 'vibration') {
+        await NotificationService().setVibrationEnabled(value as bool);
+      }
     } catch (e) {
       debugPrint("Erro updateSetting \$key: \$e");
       // Revert optimistic update
       emit(oldState);
       if (key == 'theme') {
         _applyTheme(oldState.theme);
+      }
+      if (key == 'vibration') {
+        await NotificationService().setVibrationEnabled(oldState.vibration);
       }
     }
   }

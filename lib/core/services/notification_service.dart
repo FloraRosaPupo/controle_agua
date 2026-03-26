@@ -13,6 +13,60 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  /// Preferência de Ajustes: vibração nas notificações locais (Android: canal + detalhe).
+  bool _vibrationEnabled = true;
+
+  /// Últimos lembretes agendados (para reaplicar ao mudar vibração sem abrir a aba Alertas).
+  NotificationPreferences? _cachedPrefsForReschedule;
+
+  String _androidChannelNowId() =>
+      _vibrationEnabled ? 'bebeu_water_now' : 'bebeu_water_now_nv';
+
+  String _androidChannelScheduledId() => _vibrationEnabled
+      ? 'bebeu_hydration_scheduled'
+      : 'bebeu_hydration_scheduled_nv';
+
+  Future<void> _syncAndroidChannels() async {
+    if (kIsWeb) return;
+    final android = _notificationsPlugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+
+    final vib = _vibrationEnabled;
+    await android.createNotificationChannel(
+      AndroidNotificationChannel(
+        _androidChannelNowId(),
+        'Lembretes de Hidratação',
+        description: 'Alertas na hora e meta do dia',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: vib,
+      ),
+    );
+    await android.createNotificationChannel(
+      AndroidNotificationChannel(
+        _androidChannelScheduledId(),
+        'Lembretes programados',
+        description: 'Horários que você definiu em Alertas',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: vib,
+      ),
+    );
+  }
+
+  /// Chamar após carregar Ajustes ou quando o usuário altera o interruptor de vibração.
+  Future<void> setVibrationEnabled(bool enabled) async {
+    final vibrationChanged = _vibrationEnabled != enabled;
+    _vibrationEnabled = enabled;
+    await _syncAndroidChannels();
+    if (vibrationChanged &&
+        _cachedPrefsForReschedule != null &&
+        _cachedPrefsForReschedule!.enabled) {
+      await scheduleHydrationReminders(_cachedPrefsForReschedule!);
+    }
+  }
+
   Future<void> initialize() async {
     if (kIsWeb) return; // Silencia no Web onde o plugin não é suportado da mesma forma
 
@@ -54,28 +108,7 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
-      // Canais com importância alta para aparecer na lock screen e com tela apagada
-      // (cada id cria canal novo; trocar id força upgrade se o usuário tinha canal antigo).
-      await androidPlugin.createNotificationChannel(
-        const AndroidNotificationChannel(
-          'bebeu_water_now',
-          'Lembretes de Hidratação',
-          description: 'Alertas na hora e meta do dia',
-          importance: Importance.max,
-          playSound: true,
-          enableVibration: true,
-        ),
-      );
-      await androidPlugin.createNotificationChannel(
-        const AndroidNotificationChannel(
-          'bebeu_hydration_scheduled',
-          'Lembretes programados',
-          description: 'Horários que você definiu em Alertas',
-          importance: Importance.high,
-          playSound: true,
-          enableVibration: true,
-        ),
-      );
+      await _syncAndroidChannels();
     }
   }
 
@@ -86,21 +119,18 @@ class NotificationService {
   }) async {
     if (kIsWeb) return; // Não disponível no Web
 
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      // Novo id de canal: canais antigos com importância baixa não atualizam sozinhos.
-      'bebeu_water_now',
-      'Lembretes de Hidratação',
-      channelDescription: 'Notificações para beber água',
-      importance: Importance.max,
-      priority: Priority.high,
-      visibility: NotificationVisibility.public,
-      showWhen: true,
-    );
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-      iOS: DarwinNotificationDetails(),
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        _androidChannelNowId(),
+        'Lembretes de Hidratação',
+        channelDescription: 'Notificações para beber água',
+        importance: Importance.max,
+        priority: Priority.high,
+        visibility: NotificationVisibility.public,
+        showWhen: true,
+        enableVibration: _vibrationEnabled,
+      ),
+      iOS: const DarwinNotificationDetails(),
     );
 
     await _notificationsPlugin.show(
@@ -115,6 +145,7 @@ class NotificationService {
     if (kIsWeb) return; // Não disponível no Web
 
     await _notificationsPlugin.cancelAll();
+    _cachedPrefsForReschedule = prefs.enabled ? prefs : null;
 
     if (!prefs.enabled) return;
 
@@ -156,19 +187,19 @@ class NotificationService {
             title: 'Hora de beber água!',
             body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
             scheduledDate: tz.TZDateTime.from(scheduleTime, tz.local),
-            notificationDetails: const NotificationDetails(
+            notificationDetails: NotificationDetails(
               android: AndroidNotificationDetails(
-                'bebeu_hydration_scheduled',
+                _androidChannelScheduledId(),
                 'Lembretes Periódicos',
                 channelDescription: 'Lembretes para beber água ao longo do dia',
                 importance: Importance.high,
                 priority: Priority.high,
                 visibility: NotificationVisibility.public,
                 showWhen: true,
-                enableVibration: true,
+                enableVibration: _vibrationEnabled,
                 playSound: true,
               ),
-              iOS: DarwinNotificationDetails(
+              iOS: const DarwinNotificationDetails(
                 presentAlert: true,
                 presentBadge: true,
                 presentSound: true,
