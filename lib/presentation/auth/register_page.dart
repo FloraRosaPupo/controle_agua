@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
@@ -19,9 +21,28 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
   double _dailyGoal = 2500;
   final _controller = RegisterController();
+  Timer? _loadingTimer;
+  int _loadingSeconds = 0;
+
+  void _onRegisterStateChanged(RegisterState state) {
+    if (state is RegisterLoading) {
+      _loadingTimer?.cancel();
+      setState(() => _loadingSeconds = 0);
+      _loadingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _loadingSeconds++);
+      });
+    } else {
+      _loadingTimer?.cancel();
+      _loadingTimer = null;
+      if (_loadingSeconds != 0 && mounted) {
+        setState(() => _loadingSeconds = 0);
+      }
+    }
+  }
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -47,6 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
         child: SafeArea(
           child: BlocListener<RegisterCubit, RegisterState>(
             listener: (context, state) {
+              _onRegisterStateChanged(state);
               if (state is RegisterSuccess) {
                 context.go('/home');
               } else if (state is RegisterFailure) {
@@ -70,7 +92,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       Image.asset(
                         AppAssets.logo,
-                        height: 100,
+                        height: 80,
                         fit: BoxFit.contain,
                       ),
                       const SizedBox(width: 12),
@@ -290,7 +312,10 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colors.primary,
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 56),
+                          minimumSize: Size(
+                            double.infinity,
+                            state is RegisterLoading ? 88 : 56,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -298,8 +323,25 @@ class _RegisterPageState extends State<RegisterPage> {
                           shadowColor: colors.primary.withValues(alpha: 0.4),
                         ),
                         child: state is RegisterLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _loadingSeconds == 0
+                                        ? 'Conectando …'
+                                        : 'Conectando…',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               )
                             : const Text(
                                 "Criar Conta",

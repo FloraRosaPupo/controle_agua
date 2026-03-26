@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
@@ -19,9 +21,28 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _controller = LoginController();
+  Timer? _loadingTimer;
+  int _loadingSeconds = 0;
+
+  void _onLoginStateChanged(LoginState state) {
+    if (state is LoginLoading) {
+      _loadingTimer?.cancel();
+      setState(() => _loadingSeconds = 0);
+      _loadingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _loadingSeconds++);
+      });
+    } else {
+      _loadingTimer?.cancel();
+      _loadingTimer = null;
+      if (_loadingSeconds != 0 && mounted) {
+        setState(() => _loadingSeconds = 0);
+      }
+    }
+  }
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -35,6 +56,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: BlocListener<LoginCubit, LoginState>(
           listener: (context, state) {
+            _onLoginStateChanged(state);
             if (state is LoginSuccess) {
               context.go('/home');
             } else if (state is LoginFailure) {
@@ -140,12 +162,12 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 24),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: BlocBuilder<LoginCubit, LoginState>(
-                      builder: (context, state) {
-                        return ElevatedButton(
+                  BlocBuilder<LoginCubit, LoginState>(
+                    builder: (context, state) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: state is LoginLoading ? 88 : 55,
+                        child: ElevatedButton(
                           onPressed: state is LoginLoading
                               ? null
                               : () {
@@ -161,8 +183,25 @@ class _LoginPageState extends State<LoginPage> {
                                   }
                                 },
                           child: state is LoginLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _loadingSeconds == 0
+                                          ? 'Conectando …'
+                                          : 'Conectando…',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 )
                               : const Text(
                                   "Entrar",
@@ -171,9 +210,9 @@ class _LoginPageState extends State<LoginPage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 40),
