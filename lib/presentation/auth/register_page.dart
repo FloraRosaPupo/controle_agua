@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../controllers/register_controller.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_assets.dart';
 import 'cubit/register_cubit.dart';
 import 'cubit/register_state.dart';
 
@@ -67,17 +68,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   // Top Bar: Logo + App Name
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: colors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.water_drop,
-                          color: colors.primary,
-                          size: 24,
-                        ),
+                      Image.asset(
+                        AppAssets.logo,
+                        height: 100,
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(width: 12),
                       Text(

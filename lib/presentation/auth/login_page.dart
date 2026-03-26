@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
 import '../../controllers/login_controller.dart';
-import 'register_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/api/api_client.dart';
+import '../../core/theme/app_assets.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -58,20 +58,10 @@ class _LoginPageState extends State<LoginPage> {
                   Center(
                     child: Column(
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(100),
-                            border: Border.all(
-                              color: colors.primary.withValues(alpha: 0.2),
-                            ),
-                            color: colors.primary.withValues(alpha: 0.05),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Icon(
-                            Icons.water_drop,
-                            size: 60,
-                            color: colors.primary,
-                          ),
+                        Image.asset(
+                          AppAssets.logo,
+                          height: 100,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
                         Text("bebeu", style: theme.textTheme.headlineLarge),

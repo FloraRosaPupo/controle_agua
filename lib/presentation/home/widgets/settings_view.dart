@@ -39,27 +39,6 @@ class SettingsView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [colors.primary, colors.primary.withValues(alpha: 0.3)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const CircleAvatar(
-              radius: 30,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=alex'),
-            ),
-          ),
-          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,6 +102,9 @@ class SettingsView extends StatelessWidget {
             value: value,
             onChanged: (val) {
               if (settingKey == 'theme') {
+                // Se o usuário desligar, forçamos 'light'.
+                // Se o usuário ligar, forçamos 'dark'.
+                // (O estado 'system' agora também é considerado 'true'/ON)
                 context.read<SettingsCubit>().updateSetting(
                   'theme',
                   val ? 'dark' : 'light',
@@ -259,26 +241,13 @@ class SettingsView extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
               // App Bar Area (Custom)
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    onPressed: () {}, // Handled by selected index in HomePage
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        "Configurações",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48), // Spacer for balance
-                ],
+              Center(
+                child: Text(
+                  "Configurações",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
+
               const SizedBox(height: 30),
               _buildProfileCard(theme, colors, state),
               _buildSectionTitle("Notificações", theme, colors),
@@ -305,7 +274,7 @@ class SettingsView extends StatelessWidget {
                 context: context,
                 icon: Icons.dark_mode_outlined,
                 title: "Tema Visual",
-                value: state.theme == 'dark',
+                value: state.theme == 'dark' || state.theme == 'system',
                 settingKey: 'theme',
                 colors: colors,
               ),

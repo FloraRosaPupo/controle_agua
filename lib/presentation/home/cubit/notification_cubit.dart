@@ -28,6 +28,11 @@ class NotificationCubit extends Cubit<NotificationState> {
       final data = await _settingsService.getSettings();
       final prefs = NotificationPreferences.fromJson(data['notificationSettings'] ?? {});
       emit(NotificationLoaded(prefs));
+      
+      // Agendar notificações logo ao carregar
+      if (prefs.enabled) {
+        await _notificationService.scheduleHydrationReminders(prefs);
+      }
     } catch (e) {
       emit(NotificationError(e.toString()));
     }

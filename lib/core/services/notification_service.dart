@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/notification_preferences.dart';
 
 class NotificationService {
@@ -13,10 +14,20 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
+    if (kIsWeb) return; // Silencia no Web onde o plugin não é suportado da mesma forma
+
     tz.initializeTimeZones();
+    // Tenta configurar o local, se falhar usa UTC como fallback para evitar crash
+    try {
+      // Em apps reais, usaríamos o pacote flutter_timezone para pegar o local exato
+      // Por enquanto, vamos garantir que tz.local não esteja vazio
+      tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+    } catch (e) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
 
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/logo');
 
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
@@ -51,6 +62,8 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    if (kIsWeb) return; // Não disponível no Web
+
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       'water_reminders',
@@ -74,6 +87,8 @@ class NotificationService {
   }
 
   Future<void> scheduleHydrationReminders(NotificationPreferences prefs) async {
+    if (kIsWeb) return; // Não disponível no Web
+
     await _notificationsPlugin.cancelAll();
 
     if (!prefs.enabled) return;
@@ -95,12 +110,13 @@ class NotificationService {
     for (int i = 0; i < 7; i++) {
       final date = now.add(Duration(days: i));
       
-      // Verifica se o dia da semana está ativo (Prisma/JS: 0=Dom, 1=Seg...)
-      // Mas o usuário usou 1=Seg...7=Dom no plano. Vamos converter:
-      // DateTime.weekday: 1=Seg, 7=Dom.
+      // Verifica se o dia da semana está ativo (DateTime.weekday: 1=Seg...7=Dom)
       if (!prefs.activeDays.contains(date.weekday)) continue;
 
-      for (int hour = startTime.hour; hour <= endTime.hour; hour += prefs.intervalHours) {
+      // Usando um intervalo seguro (mínimo 1 hora se vier 0 do cálculo atual)
+      final step = prefs.intervalHours > 0 ? prefs.intervalHours : 1;
+
+      for (int hour = startTime.hour; hour <= endTime.hour; hour += step) {
         final scheduleTime = DateTime(
           date.year,
           date.month,
@@ -119,11 +135,17 @@ class NotificationService {
               android: AndroidNotificationDetails(
                 'hydration_reminders',
                 'Lembretes Periódicos',
+                channelDescription: 'Lembretes para beber água ao longo do dia',
                 importance: Importance.low,
+                priority: Priority.low,
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
               ),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-            matchDateTimeComponents: DateTimeComponents.time,
           );
         }
       }
