@@ -233,52 +233,60 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
     ColorScheme colors,
     NotificationPreferences prefs,
   ) {
-    final intervals = [1, 2, 3, 4];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: intervals.map((h) {
-        final isSelected = prefs.intervalHours == h;
-        return GestureDetector(
-          onTap: () => _updatePrefs(prefs.copyWith(intervalHours: h)),
-          child: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected
-                  ? Colors.transparent
-                  : colors.onSurface.withValues(alpha: 0.05),
-              border: Border.all(
+    // Lista de intervalos em minutos para facilitar o teste e uso real
+    final intervals = [1, 5, 15, 30, 60, 120, 180];
+    
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: intervals.map((m) {
+          final isSelected = prefs.intervalMinutes == m;
+          final label = m < 60 ? "${m}min" : "${m ~/ 60}h";
+          
+          return GestureDetector(
+            onTap: () => _updatePrefs(prefs.copyWith(intervalMinutes: m)),
+            child: Container(
+              width: 58,
+              height: 58,
+              margin: const EdgeInsets.only(right: 12, bottom: 4, top: 4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 color: isSelected
-                    ? colors.primary
-                    : colors.onSurface.withValues(alpha: 0.1),
-                width: 2,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: colors.primary.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: Text(
-                "${h}h",
-                style: TextStyle(
+                    ? colors.primary.withValues(alpha: 0.1)
+                    : colors.onSurface.withValues(alpha: 0.05),
+                border: Border.all(
                   color: isSelected
                       ? colors.primary
-                      : colors.onSurface.withValues(alpha: 0.5),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                      : colors.onSurface.withValues(alpha: 0.1),
+                  width: 2,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: colors.primary.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? colors.primary
+                        : colors.onSurface.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 

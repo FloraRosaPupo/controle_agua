@@ -169,16 +169,25 @@ class NotificationService {
       // Verifica se o dia da semana está ativo (DateTime.weekday: 1=Seg...7=Dom)
       if (!prefs.activeDays.contains(date.weekday)) continue;
 
-      // Usando um intervalo seguro (mínimo 1 hora se vier 0 do cálculo atual)
-      final step = prefs.intervalHours > 0 ? prefs.intervalHours : 1;
+      // Usando um intervalo seguro (mínimo 1 minuto)
+      final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
 
-      for (int hour = startTime.hour; hour <= endTime.hour; hour += step) {
+      // Calculamos o total de minutos desde o início até o fim para o loop
+      final startTotalMinutes = startTime.hour * 60 + startTime.minute;
+      final endTotalMinutes = endTime.hour * 60 + endTime.minute;
+
+      for (int currentTotal = startTotalMinutes;
+          currentTotal <= endTotalMinutes;
+          currentTotal += stepMinutes) {
+        final hour = currentTotal ~/ 60;
+        final minute = currentTotal % 60;
+
         final scheduleTime = DateTime(
           date.year,
           date.month,
           date.day,
           hour,
-          startTime.minute,
+          minute,
         );
 
         if (scheduleTime.isAfter(now)) {
@@ -205,7 +214,7 @@ class NotificationService {
                 presentSound: true,
               ),
             ),
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           );
         }
       }

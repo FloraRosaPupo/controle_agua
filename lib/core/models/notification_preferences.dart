@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class NotificationPreferences {
-  final int intervalHours; // 1, 2, 3 or 4
+  final int intervalMinutes; // mins
   final List<int> activeDays; // 1=Mon ... 7=Sun
   final String startTime; // HH:mm
   final String endTime; // HH:mm
   final bool enabled;
 
   NotificationPreferences({
-    required this.intervalHours,
+    required this.intervalMinutes,
     required this.activeDays,
     required this.startTime,
     required this.endTime,
@@ -28,9 +28,7 @@ class NotificationPreferences {
     }).toList();
 
     return NotificationPreferences(
-      intervalHours: json['intervalInMinutes'] != null 
-          ? (json['intervalInMinutes'] as int) ~/ 60 
-          : 2,
+      intervalMinutes: json['intervalInMinutes'] ?? 120,
       activeDays: mappedDays,
       startTime: json['startTime'] ?? '08:00',
       endTime: json['endTime'] ?? '22:00',
@@ -46,7 +44,7 @@ class NotificationPreferences {
     }).toList();
 
     return {
-      'intervalInMinutes': intervalHours * 60,
+      'intervalInMinutes': intervalMinutes,
       'daysOfWeek': backendDays,
       'startTime': startTime,
       'endTime': endTime,
@@ -55,14 +53,14 @@ class NotificationPreferences {
   }
 
   NotificationPreferences copyWith({
-    int? intervalHours,
+    int? intervalMinutes,
     List<int>? activeDays,
     String? startTime,
     String? endTime,
     bool? enabled,
   }) {
     return NotificationPreferences(
-      intervalHours: intervalHours ?? this.intervalHours,
+      intervalMinutes: intervalMinutes ?? this.intervalMinutes,
       activeDays: activeDays ?? this.activeDays,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,

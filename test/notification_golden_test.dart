@@ -40,7 +40,7 @@ void main() {
 
   testWidgets('NotificationSettingsView loaded state golden test', (tester) async {
     final prefs = NotificationPreferences(
-      intervalHours: 2,
+      intervalMinutes: 120,
       activeDays: [1, 2, 3, 4, 5],
       startTime: '08:00',
       endTime: '22:00',

@@ -14,7 +14,7 @@ void main() {
 
       final prefs = NotificationPreferences.fromJson(json);
 
-      expect(prefs.intervalHours, 2);
+      expect(prefs.intervalMinutes, 120);
       expect(prefs.activeDays, [1, 2, 3]);
       expect(prefs.startTime, '09:00');
       expect(prefs.endTime, '21:00');
@@ -23,7 +23,7 @@ void main() {
 
     test('toJson should create a valid map', () {
       final prefs = NotificationPreferences(
-        intervalHours: 3,
+        intervalMinutes: 180,
         activeDays: [1, 5],
         startTime: '08:30',
         endTime: '22:30',
@@ -41,16 +41,16 @@ void main() {
 
     test('copyWith should update fields correctly', () {
       final prefs = NotificationPreferences(
-        intervalHours: 1,
+        intervalMinutes: 60,
         activeDays: [1],
         startTime: '08:00',
         endTime: '20:00',
         enabled: true,
       );
 
-      final updated = prefs.copyWith(intervalHours: 4, enabled: false);
+      final updated = prefs.copyWith(intervalMinutes: 240, enabled: false);
 
-      expect(updated.intervalHours, 4);
+      expect(updated.intervalMinutes, 240);
       expect(updated.enabled, false);
       expect(updated.activeDays, [1]);
     });
