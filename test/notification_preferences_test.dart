@@ -21,6 +21,28 @@ void main() {
       expect(prefs.enabled, true);
     });
 
+    test('fromJson: intervalo < 30 min sobe para 30', () {
+      final prefs = NotificationPreferences.fromJson({
+        'intervalInMinutes': 1,
+        'daysOfWeek': [1],
+        'startTime': '08:00',
+        'endTime': '22:00',
+        'enabled': true,
+      });
+      expect(prefs.intervalMinutes, 30);
+    });
+
+    test('fromJson: daysOfWeek vazio usa todos os dias (como o backend)', () {
+      final prefs = NotificationPreferences.fromJson({
+        'intervalInMinutes': 60,
+        'daysOfWeek': <int>[],
+        'startTime': '08:00',
+        'endTime': '22:00',
+        'enabled': true,
+      });
+      expect(prefs.activeDays, [7, 1, 2, 3, 4, 5, 6]);
+    });
+
     test('toJson should create a valid map', () {
       final prefs = NotificationPreferences(
         intervalMinutes: 180,

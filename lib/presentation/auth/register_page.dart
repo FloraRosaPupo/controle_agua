@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_assets.dart';
 import 'cubit/register_cubit.dart';
 import 'cubit/register_state.dart';
+import '../home/cubit/notification_cubit.dart';
+import '../home/cubit/settings_cubit.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -70,6 +72,8 @@ class _RegisterPageState extends State<RegisterPage> {
             listener: (context, state) {
               _onRegisterStateChanged(state);
               if (state is RegisterSuccess) {
+                context.read<NotificationCubit>().loadPreferences();
+                context.read<SettingsCubit>().loadSettings();
                 context.go('/home');
               } else if (state is RegisterFailure) {
                 ScaffoldMessenger.of(context).showSnackBar(

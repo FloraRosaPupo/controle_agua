@@ -1,9 +1,19 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/notification_preferences.dart';
+
+/// Um par (dia da semana [DateTime.weekday], minutos desde 00:00) para agendar.
+class _HydrationSlot {
+  const _HydrationSlot(this.weekday, this.totalMinutes);
+  final int weekday;
+  final int totalMinutes;
+}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,6 +29,11 @@ class NotificationService {
   /// Últimos lembretes agendados (para reaplicar ao mudar vibração sem abrir a aba Alertas).
   NotificationPreferences? _cachedPrefsForReschedule;
 
+  /// Evita duas sequências cancelAll + zonedSchedule em paralelo (pode inflar alarmes no Android).
+  Future<void> _scheduleChain = Future<void>.value();
+
+  Timer? _debugNearFireTimer;
+
   String _androidChannelNowId() =>
       _vibrationEnabled ? 'bebeu_water_now' : 'bebeu_water_now_nv';
 
@@ -28,8 +43,10 @@ class NotificationService {
 
   Future<void> _syncAndroidChannels() async {
     if (kIsWeb) return;
-    final android = _notificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (android == null) return;
 
     final vib = _vibrationEnabled;
@@ -48,7 +65,7 @@ class NotificationService {
         _androidChannelScheduledId(),
         'Lembretes programados',
         description: 'Horários que você definiu em Alertas',
-        importance: Importance.high,
+        importance: Importance.max,
         playSound: true,
         enableVibration: vib,
       ),
@@ -68,7 +85,9 @@ class NotificationService {
   }
 
   Future<void> initialize() async {
-    if (kIsWeb) return; // Silencia no Web onde o plugin não é suportado da mesma forma
+    if (kIsWeb) {
+      return; // Silencia no Web onde o plugin não é suportado da mesma forma
+    }
 
     tz.initializeTimeZones();
     // Tenta configurar o local, se falhar usa UTC como fallback para evitar crash
@@ -85,10 +104,10 @@ class NotificationService {
 
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
 
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
@@ -105,9 +124,12 @@ class NotificationService {
     // Request notification permission on Android 13+
     final androidPlugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (androidPlugin != null) {
       await androidPlugin.requestNotificationsPermission();
+      // Alarmes agendados: inexact costuma não disparar no horário com Doze / Android 14+.
+      await androidPlugin.requestExactAlarmsPermission();
       await _syncAndroidChannels();
     }
   }
@@ -141,15 +163,283 @@ class NotificationService {
     );
   }
 
-  Future<void> scheduleHydrationReminders(NotificationPreferences prefs) async {
-    if (kIsWeb) return; // Não disponível no Web
+  /// Próxima ocorrência semanal: [weekday] (1=Seg…7=Dom, como [DateTime.weekday]) às [hour]:[minute].
+  tz.TZDateTime _nextWeekdayOccurrence(int weekday, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var t = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var days = weekday - t.weekday;
+    if (days < 0) days += 7;
+    t = t.add(Duration(days: days));
+    if (!t.isAfter(now)) {
+      t = t.add(const Duration(days: 7));
+    }
+    return t;
+  }
 
+  /// Próximo disparo no relógio (hora:minuto), repetindo **todo dia** (`DateTimeComponents.time`).
+  tz.TZDateTime _nextDailyClockTime(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var t = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (!t.isAfter(now)) {
+      t = t.add(const Duration(days: 1));
+    }
+    return t;
+  }
+
+  static const Set<int> _allWeekdays = {1, 2, 3, 4, 5, 6, 7};
+
+  /// Mínimo 30 min (igual às opções do app); evita intervalos antigos 1/5/15 vindos do servidor.
+  int _scheduleStepMinutes(NotificationPreferences prefs) {
+    final raw = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    return raw < 30 ? 30 : raw;
+  }
+
+  bool _activeDaysAreFullWeek(List<int> activeDays) {
+    return activeDays.toSet().containsAll(_allWeekdays);
+  }
+
+  /// Marcas em minutos desde 00:00 dentro da janela, com passo fixo ou poucos pontos espaçados se passar [maxMarks].
+  List<int> _minuteMarksInWindow({
+    required int startTotalMinutes,
+    required int endTotalMinutes,
+    required int stepMinutes,
+    required int maxMarks,
+  }) {
+    if (endTotalMinutes < startTotalMinutes) return [];
+    var nSteps = 0;
+    for (var t = startTotalMinutes; t <= endTotalMinutes; t += stepMinutes) {
+      nSteps++;
+    }
+    if (nSteps <= maxMarks) {
+      return [
+        for (var t = startTotalMinutes; t <= endTotalMinutes; t += stepMinutes)
+          t,
+      ];
+    }
+    if (maxMarks <= 1) {
+      return [startTotalMinutes];
+    }
+    final span = endTotalMinutes - startTotalMinutes;
+    final seen = <int>{};
+    final out = <int>[];
+    for (var i = 0; i < maxMarks; i++) {
+      final total =
+          startTotalMinutes +
+          ((span * i) / (maxMarks - 1)).round().clamp(0, span);
+      if (seen.add(total)) {
+        out.add(total);
+      }
+    }
+    return out;
+  }
+
+  List<_HydrationSlot> _hydrationSlotsEvenPerDay(
+    List<int> active,
+    int startTotalMinutes,
+    int endTotalMinutes,
+    int maxAlarms,
+  ) {
+    final perDay = math.max(1, maxAlarms ~/ active.length);
+    final span = endTotalMinutes - startTotalMinutes;
+    final out = <_HydrationSlot>[];
+    for (final weekday in active) {
+      if (perDay == 1) {
+        out.add(_HydrationSlot(weekday, startTotalMinutes));
+        continue;
+      }
+      final seen = <int>{};
+      for (var i = 0; i < perDay; i++) {
+        final total =
+            startTotalMinutes +
+            ((span * i) / (perDay - 1)).round().clamp(0, span);
+        if (seen.add(total)) {
+          out.add(_HydrationSlot(weekday, total));
+        }
+      }
+    }
+    if (out.length > maxAlarms) {
+      return out.sublist(0, maxAlarms);
+    }
+    return out;
+  }
+
+  List<_HydrationSlot> _hydrationSlotsUnified(
+    NotificationPreferences prefs, {
+    required int maxAlarms,
+    required int startTotalMinutes,
+    required int endTotalMinutes,
+    required int stepMinutes,
+  }) {
+    final active = prefs.activeDays;
+    if (active.isEmpty || endTotalMinutes < startTotalMinutes) return [];
+
+    var nSteps = 0;
+    for (var t = startTotalMinutes; t <= endTotalMinutes; t += stepMinutes) {
+      nSteps++;
+    }
+    final totalWould = active.length * nSteps;
+
+    if (totalWould <= maxAlarms) {
+      final out = <_HydrationSlot>[];
+      for (final weekday in active) {
+        for (
+          var t = startTotalMinutes;
+          t <= endTotalMinutes;
+          t += stepMinutes
+        ) {
+          out.add(_HydrationSlot(weekday, t));
+        }
+      }
+      return out;
+    }
+
+    return _hydrationSlotsEvenPerDay(
+      active,
+      startTotalMinutes,
+      endTotalMinutes,
+      maxAlarms,
+    );
+  }
+
+  List<tz.TZDateTime> _plannedNextFireTimes(
+    NotificationPreferences prefs, {
+    int maxPoints = 420,
+  }) {
+    if (!prefs.enabled || prefs.activeDays.isEmpty) return [];
+
+    final startParts = prefs.startTime.split(':');
+    final endParts = prefs.endTime.split(':');
+    final startTime = TimeOfDay(
+      hour: int.parse(startParts[0]),
+      minute: int.parse(startParts[1]),
+    );
+    final endTime = TimeOfDay(
+      hour: int.parse(endParts[0]),
+      minute: int.parse(endParts[1]),
+    );
+
+    final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    final startTotalMinutes = startTime.hour * 60 + startTime.minute;
+    final endTotalMinutes = endTime.hour * 60 + endTime.minute;
+
+    final list = <tz.TZDateTime>[];
+
+    if (_activeDaysAreFullWeek(prefs.activeDays)) {
+      final marks = _minuteMarksInWindow(
+        startTotalMinutes: startTotalMinutes,
+        endTotalMinutes: endTotalMinutes,
+        stepMinutes: stepMinutes,
+        maxMarks: maxPoints,
+      );
+      for (final total in marks) {
+        final hour = total ~/ 60;
+        final minute = total % 60;
+        list.add(_nextDailyClockTime(hour, minute));
+      }
+    } else {
+      final slots = _hydrationSlotsUnified(
+        prefs,
+        maxAlarms: maxPoints,
+        startTotalMinutes: startTotalMinutes,
+        endTotalMinutes: endTotalMinutes,
+        stepMinutes: stepMinutes,
+      );
+      for (final s in slots) {
+        final hour = s.totalMinutes ~/ 60;
+        final minute = s.totalMinutes % 60;
+        list.add(_nextWeekdayOccurrence(s.weekday, hour, minute));
+      }
+    }
+    list.sort((a, b) => a.compareTo(b));
+    return list;
+  }
+
+  void _stopDebugNearFireMonitoring() {
+    _debugNearFireTimer?.cancel();
+    _debugNearFireTimer = null;
+  }
+
+  void _startDebugNearFireMonitoring() {
+    _stopDebugNearFireMonitoring();
+    if (!kDebugMode || kIsWeb) return;
+
+    _debugNearFireTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final prefs = _cachedPrefsForReschedule;
+      if (prefs == null || !prefs.enabled) {
+        _stopDebugNearFireMonitoring();
+        return;
+      }
+
+      final now = tz.TZDateTime.now(tz.local);
+      final times = _plannedNextFireTimes(prefs);
+      if (times.isEmpty) return;
+
+      tz.TZDateTime? next;
+      for (final t in times) {
+        if (t.isAfter(now)) {
+          next = t;
+          break;
+        }
+      }
+      next ??= times.first;
+
+      final until = next.difference(now);
+      if (until.inMinutes <= 5 && !until.isNegative) {
+        debugPrint(
+          '[BebeuNotify DEBUG] Próximo lembrete em ${until.inMinutes}m ${until.inSeconds % 60}s '
+          '(local ${next.toString()}) | tz=${tz.local.name}',
+        );
+      }
+    });
+  }
+
+  void _debugLogScheduleSummary(
+    int scheduledCount,
+    NotificationPreferences prefs,
+  ) {
+    if (!kDebugMode || kIsWeb) return;
+    final times = _plannedNextFireTimes(prefs, maxPoints: scheduledCount);
+    final modo = _activeDaysAreFullWeek(prefs.activeDays)
+        ? 'diário (hora)'
+        : 'dias da semana';
+    final buf = StringBuffer(
+      '[BebeuNotify DEBUG] Agendados $scheduledCount lembretes | modo=$modo | tz=${tz.local.name} | '
+      'intervalo=${prefs.intervalMinutes}m | ${prefs.startTime}–${prefs.endTime} | '
+      'dias=${prefs.activeDays}',
+    );
+    if (times.isNotEmpty) {
+      final show = times.length > 3 ? times.sublist(0, 3) : times;
+      buf.write(' | próximos: ');
+      buf.write(show.map((t) => t.toString()).join(', '));
+      if (times.length > 3) buf.write(', …');
+    }
+    debugPrint(buf.toString());
+  }
+
+  Future<void> scheduleHydrationReminders(NotificationPreferences prefs) async {
+    if (kIsWeb) return;
+
+    _scheduleChain = _scheduleChain
+        .catchError((Object e, StackTrace st) {
+          debugPrint(
+            'scheduleHydrationReminders: tentativa anterior falhou (fila segue): $e',
+          );
+        })
+        .then((_) => _scheduleHydrationRemindersImpl(prefs));
+    await _scheduleChain;
+  }
+
+  Future<void> _scheduleHydrationRemindersImpl(
+    NotificationPreferences prefs,
+  ) async {
     await _notificationsPlugin.cancelAll();
     _cachedPrefsForReschedule = prefs.enabled ? prefs : null;
 
-    if (!prefs.enabled) return;
+    if (!prefs.enabled) {
+      _stopDebugNearFireMonitoring();
+      return;
+    }
 
-    final now = DateTime.now();
     final startParts = prefs.startTime.split(':');
     final endParts = prefs.endTime.split(':');
 
@@ -162,63 +452,113 @@ class NotificationService {
       minute: int.parse(endParts[1]),
     );
 
-    // Agendar notificações para os próximos 7 dias
-    for (int i = 0; i < 7; i++) {
-      final date = now.add(Duration(days: i));
-      
-      // Verifica se o dia da semana está ativo (DateTime.weekday: 1=Seg...7=Dom)
-      if (!prefs.activeDays.contains(date.weekday)) continue;
+    int scheduledCount = 0;
+    // Android: limite duro ~500 alarmes por app; margem para outros usos do plugin/OS.
+    const int maxAlarms = 420;
 
-      // Usando um intervalo seguro (mínimo 1 minuto)
-      final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
 
-      // Calculamos o total de minutos desde o início até o fim para o loop
-      final startTotalMinutes = startTime.hour * 60 + startTime.minute;
-      final endTotalMinutes = endTime.hour * 60 + endTime.minute;
+    final startTotalMinutes = startTime.hour * 60 + startTime.minute;
+    final endTotalMinutes = endTime.hour * 60 + endTime.minute;
 
-      for (int currentTotal = startTotalMinutes;
-          currentTotal <= endTotalMinutes;
-          currentTotal += stepMinutes) {
-        final hour = currentTotal ~/ 60;
-        final minute = currentTotal % 60;
-
-        final scheduleTime = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          hour,
-          minute,
+    AndroidScheduleMode androidScheduleMode =
+        AndroidScheduleMode.exactAllowWhileIdle;
+    if (!kIsWeb) {
+      final android = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final canExact = await android?.canScheduleExactNotifications();
+      if (canExact != true) {
+        androidScheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+        debugPrint(
+          '[BebeuNotify] Sem permissão de alarmes exatos — lembretes podem atrasar. '
+          'Em Ajustes do Android: Apps > bebeu > Alarmes e lembretes (ou tempo) > permitir.',
         );
-
-        if (scheduleTime.isAfter(now)) {
-          await _notificationsPlugin.zonedSchedule(
-            id: i * 1440 + currentTotal,
-            title: 'Hora de beber água!',
-            body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
-            scheduledDate: tz.TZDateTime.from(scheduleTime, tz.local),
-            notificationDetails: NotificationDetails(
-              android: AndroidNotificationDetails(
-                _androidChannelScheduledId(),
-                'Lembretes Periódicos',
-                channelDescription: 'Lembretes para beber água ao longo do dia',
-                importance: Importance.high,
-                priority: Priority.high,
-                visibility: NotificationVisibility.public,
-                showWhen: true,
-                enableVibration: _vibrationEnabled,
-                playSound: true,
-              ),
-              iOS: const DarwinNotificationDetails(
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-              ),
-            ),
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          );
-        }
       }
     }
+
+    if (_activeDaysAreFullWeek(prefs.activeDays)) {
+      final marks = _minuteMarksInWindow(
+        startTotalMinutes: startTotalMinutes,
+        endTotalMinutes: endTotalMinutes,
+        stepMinutes: stepMinutes,
+        maxMarks: maxAlarms,
+      );
+      for (final total in marks) {
+        final hour = total ~/ 60;
+        final minute = total % 60;
+        scheduledCount++;
+        await _notificationsPlugin.zonedSchedule(
+          id: total,
+          title: 'Hora de beber água!',
+          body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
+          scheduledDate: _nextDailyClockTime(hour, minute),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _androidChannelScheduledId(),
+              'Lembretes Periódicos',
+              channelDescription: 'Lembretes para beber água ao longo do dia',
+              importance: Importance.max,
+              priority: Priority.high,
+              visibility: NotificationVisibility.public,
+              showWhen: true,
+              enableVibration: _vibrationEnabled,
+              playSound: true,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          androidScheduleMode: androidScheduleMode,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+      }
+    } else {
+      final slots = _hydrationSlotsUnified(
+        prefs,
+        maxAlarms: maxAlarms,
+        startTotalMinutes: startTotalMinutes,
+        endTotalMinutes: endTotalMinutes,
+        stepMinutes: stepMinutes,
+      );
+      for (final s in slots) {
+        final hour = s.totalMinutes ~/ 60;
+        final minute = s.totalMinutes % 60;
+        scheduledCount++;
+        await _notificationsPlugin.zonedSchedule(
+          id: s.weekday * 1440 + s.totalMinutes,
+          title: 'Hora de beber água!',
+          body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
+          scheduledDate: _nextWeekdayOccurrence(s.weekday, hour, minute),
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _androidChannelScheduledId(),
+              'Lembretes Periódicos',
+              channelDescription: 'Lembretes para beber água ao longo do dia',
+              importance: Importance.max,
+              priority: Priority.high,
+              visibility: NotificationVisibility.public,
+              showWhen: true,
+              enableVibration: _vibrationEnabled,
+              playSound: true,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          androidScheduleMode: androidScheduleMode,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      }
+    }
+
+    _debugLogScheduleSummary(scheduledCount, prefs);
+    _startDebugNearFireMonitoring();
   }
 
   void checkProgressAndNotify({

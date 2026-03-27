@@ -233,8 +233,8 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
     ColorScheme colors,
     NotificationPreferences prefs,
   ) {
-    // Lista de intervalos em minutos para facilitar o teste e uso real
-    final intervals = [1, 5, 15, 30, 60, 120, 180];
+    // Intervalos em minutos (mínimo 30 para caber no limite de alarmes do Android).
+    final intervals = [30, 60, 120, 180];
     
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

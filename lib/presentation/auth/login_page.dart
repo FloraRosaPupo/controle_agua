@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import 'cubit/login_cubit.dart';
 import 'cubit/login_state.dart';
 import '../../data/services/auth_service.dart';
+import '../home/cubit/notification_cubit.dart';
+import '../home/cubit/settings_cubit.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_assets.dart';
 
@@ -58,6 +60,9 @@ class _LoginPageState extends State<LoginPage> {
           listener: (context, state) {
             _onLoginStateChanged(state);
             if (state is LoginSuccess) {
+              // Token acaba de ser definido; recarrega settings do banco e agenda notificações.
+              context.read<NotificationCubit>().loadPreferences();
+              context.read<SettingsCubit>().loadSettings();
               context.go('/home');
             } else if (state is LoginFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -151,14 +156,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
 
                   const SizedBox(height: 12),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text("Esqueci minha senha"),
-                    ),
-                  ),
 
                   const SizedBox(height: 24),
 

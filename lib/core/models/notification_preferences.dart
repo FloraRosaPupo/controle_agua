@@ -18,21 +18,32 @@ class NotificationPreferences {
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     // Backend (Prisma): 0=Dom, 1=Seg...6=Sáb
     // Flutter (DateTime): 1=Seg...7=Dom
-    final List<int> rawDays = json['daysOfWeek'] != null 
-        ? List<int>.from(json['daysOfWeek']) 
-        : [0, 1, 2, 3, 4, 5, 6];
+    final dynamic dow = json['daysOfWeek'];
+    final List<int> rawDays;
+    if (dow is! List || dow.isEmpty) {
+      rawDays = [0, 1, 2, 3, 4, 5, 6];
+    } else {
+      rawDays = dow.map((e) => (e as num).toInt()).toList();
+    }
 
     final List<int> mappedDays = rawDays.map((day) {
       if (day == 0) return 7; // Sunday: 0 -> 7
       return day; // Others stay the same (1=Mon...6=Sat)
     }).toList();
 
+    final dynamic enabledRaw = json['enabled'];
+    final bool enabled = enabledRaw is bool
+        ? enabledRaw
+        : (enabledRaw == null ? true : enabledRaw == 1 || enabledRaw == 'true');
+
+    final rawInterval =
+        (json['intervalInMinutes'] as num?)?.toInt() ?? 60;
     return NotificationPreferences(
-      intervalMinutes: json['intervalInMinutes'] ?? 120,
+      intervalMinutes: rawInterval < 30 ? 30 : rawInterval,
       activeDays: mappedDays,
-      startTime: json['startTime'] ?? '08:00',
-      endTime: json['endTime'] ?? '22:00',
-      enabled: json['enabled'] ?? true,
+      startTime: json['startTime']?.toString() ?? '08:00',
+      endTime: json['endTime']?.toString() ?? '22:00',
+      enabled: enabled,
     );
   }
 
