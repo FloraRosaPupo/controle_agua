@@ -1,7 +1,22 @@
 import { prisma } from "./prisma"
-
 import { Response } from "express"
 import { AuthRequest } from "./types"
+
+function getStartOfUserDayInUTC(req: AuthRequest): Date {
+    const offsetHeader = req.header('x-timezone-offset')
+    // offset in minutes from client, e.g. -180 for Brazil
+    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+
+    const now = new Date()
+    // adjust now to user's local "day" (User clock = UTC + offset)
+    const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000))
+
+    // reset to midnight in that offset's "world"
+    userLocalNow.setUTCHours(0, 0, 0, 0)
+
+    // convert back to UTC for DB query
+    return new Date(userLocalNow.getTime() - (offsetMinutes * 60 * 1000))
+}
 
 export async function addWater(req: AuthRequest, res: Response) {
     const { amount } = req.body
@@ -28,20 +43,25 @@ export async function addWater(req: AuthRequest, res: Response) {
 
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
+    let startDate: Date
+    let endDate: Date
     const { period, date } = req.query
-
-    let startDate = new Date()
-    let endDate = new Date()
 
     if (date) {
         startDate = new Date(date as string)
-        startDate.setHours(0, 0, 0, 0)
-        endDate = new Date(date as string)
-        endDate.setHours(23, 59, 59, 999)
+        startDate.setUTCHours(0, 0, 0, 0)
+        // If the date is passed, we should ideally still apply the offset, but since it's a fixed date string (e.g. 2026-03-27),
+        // we'll treat it as midnight UTC + offset.
+        const offsetHeader = req.header('x-timezone-offset')
+        const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+        startDate = new Date(startDate.getTime() - (offsetMinutes * 60 * 1000))
+
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
     } else {
         const days = period === '30d' ? 30 : 7
+        startDate = getStartOfUserDayInUTC(req)
         startDate.setDate(startDate.getDate() - days)
-        startDate.setHours(0, 0, 0, 0)
+        endDate = new Date()
     }
 
     const logs = await prisma.waterLog.findMany({
@@ -66,10 +86,14 @@ export async function history(req: AuthRequest, res: Response) {
 
     const dailyGoal = user.dailyGoal
 
-    // Cálculo de estatísticas
+    // Cálculo de estatísticas (ajustado para timezone)
+    const offsetHeader = req.header('x-timezone-offset')
+    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+
     const logsByDay: { [key: string]: number } = {}
     logs.forEach(log => {
-        const day = log.date.toISOString().split('T')[0]
+        const localDate = new Date(log.date.getTime() + (offsetMinutes * 60 * 1000))
+        const day = localDate.toISOString().split('T')[0]
         logsByDay[day] = (logsByDay[day] || 0) + log.amount
     })
 
@@ -92,8 +116,7 @@ export async function history(req: AuthRequest, res: Response) {
 export async function today(req: AuthRequest, res: Response) {
     const userId = req.userId
 
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
+    const startOfDay = getStartOfUserDayInUTC(req)
 
     const logs = await prisma.waterLog.findMany({
         where: {

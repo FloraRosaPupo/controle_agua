@@ -18,7 +18,17 @@ export async function register(req: Request, res: Response) {
                 name,
                 email,
                 password: hash,
-                dailyGoal: dailyGoal && dailyGoal > 0 ? dailyGoal : 2000
+                dailyGoal: dailyGoal && dailyGoal > 0 ? dailyGoal : 2000,
+                notificationSettings: {
+                    create: {
+                        type: "hourly",
+                        intervalInMinutes: 60,
+                        startTime: "08:00",
+                        endTime: "22:00",
+                        enabled: true,
+                        daysOfWeek: [0, 1, 2, 3, 4, 5, 6]
+                    }
+                }
             }
         })
         res.json(user)

@@ -11,7 +11,10 @@ class ApiClient {
           baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 90),
           receiveTimeout: const Duration(seconds: 90),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-timezone-offset': DateTime.now().timeZoneOffset.inMinutes.toString(),
+          },
         ),
       ) {
     dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));

@@ -205,10 +205,7 @@ class NotificationService {
                 presentSound: true,
               ),
             ),
-            // Alarmes exatos exigem permissão extra no Android 12+ e falham com
-            // PlatformException(exact_alarms_not_permitted) em muitos APKs.
-            // Inexato ainda entrega lembretes (pode haver pequeno atraso pelo sistema).
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );
         }
       }
