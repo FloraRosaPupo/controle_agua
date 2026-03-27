@@ -126,10 +126,15 @@ export async function changePassword(req: Request, res: Response) {
 
         const { currentPassword, newPassword } = req.body;
 
-        if (!currentPassword || !newPassword) {
+        // Garantir que recebemos strings e remover espaços extras acidentais
+        const curPass = currentPassword ? String(currentPassword).trim() : "";
+        const newPass = newPassword ? String(newPassword).trim() : "";
+
+        if (!curPass || !newPass) {
             return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
         }
-        if (String(newPassword).length < 6) {
+
+        if (newPass.length < 6) {
             return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
         }
 
@@ -138,12 +143,14 @@ export async function changePassword(req: Request, res: Response) {
             return res.status(404).json({ error: "Usuário não encontrado" });
         }
 
-        const valid = await bcrypt.compare(currentPassword, user.password);
+        // Comparação com bcrypt
+        const valid = await bcrypt.compare(curPass, user.password);
         if (!valid) {
             return res.status(400).json({ error: "Senha atual incorreta" });
         }
 
-        const hash = await bcrypt.hash(String(newPassword), 10);
+        // Gerar novo hash e salvar
+        const hash = await bcrypt.hash(newPass, 10);
         await prisma.user.update({
             where: { id: userId },
             data: { password: hash },
