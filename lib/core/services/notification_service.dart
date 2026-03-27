@@ -192,7 +192,7 @@ class NotificationService {
 
         if (scheduleTime.isAfter(now)) {
           await _notificationsPlugin.zonedSchedule(
-            id: i * 100 + hour,
+            id: i * 1440 + currentTotal,
             title: 'Hora de beber água!',
             body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
             scheduledDate: tz.TZDateTime.from(scheduleTime, tz.local),
