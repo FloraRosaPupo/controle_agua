@@ -318,7 +318,7 @@ class NotificationService {
       minute: int.parse(endParts[1]),
     );
 
-    final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    final stepMinutes = _scheduleStepMinutes(prefs);
     final startTotalMinutes = startTime.hour * 60 + startTime.minute;
     final endTotalMinutes = endTime.hour * 60 + endTime.minute;
 
@@ -404,7 +404,7 @@ class NotificationService {
         : 'dias da semana';
     final buf = StringBuffer(
       '[BebeuNotify DEBUG] Agendados $scheduledCount lembretes | modo=$modo | tz=${tz.local.name} | '
-      'intervalo=${prefs.intervalMinutes}m | ${prefs.startTime}–${prefs.endTime} | '
+      'intervalo=${_scheduleStepMinutes(prefs)}m | ${prefs.startTime}–${prefs.endTime} | '
       'dias=${prefs.activeDays}',
     );
     if (times.isNotEmpty) {
@@ -456,7 +456,7 @@ class NotificationService {
     // Android: limite duro ~500 alarmes por app; margem para outros usos do plugin/OS.
     const int maxAlarms = 420;
 
-    final stepMinutes = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    final stepMinutes = _scheduleStepMinutes(prefs);
 
     final startTotalMinutes = startTime.hour * 60 + startTime.minute;
     final endTotalMinutes = endTime.hour * 60 + endTime.minute;
