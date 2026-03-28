@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/daily_water_data_model.dart';
 import '../../../data/services/water_service.dart';
@@ -85,6 +86,9 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> addWater(int ml) async {
+    // Só aceita valores positivos
+    if (ml <= 0) return;
+    
     // Ação baseada somente se os dados originais já existirem na tela
     if (state is HomeLoaded) {
       final currentState = state as HomeLoaded;
@@ -126,8 +130,8 @@ class HomeCubit extends Cubit<HomeState> {
 
       try {
         await _waterService.addWater(ml);
-        // Recarregar para pegar os IDs corretos do banco
-        await loadTodayData();
+        // Recarregar para pegar os IDs corretos do banco (sem loading visual)
+        await refreshTodayData();
       } catch (e) {
         // Se a API falhar, reverter de volta pra visão anterior
         _updateWidget(
@@ -142,16 +146,21 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> deleteWaterLog(String id) async {
+    debugPrint('🗑️ deleteWaterLog chamado com id: $id');
+    
     if (state is HomeLoaded) {
       final currentState = state as HomeLoaded;
+      debugPrint('📊 Estado atual: intake=${currentState.currentIntake}, history=${currentState.todayHistory.length} items');
 
       // Visão otimista: remove localmente primeiro
-      final Map<String, dynamic> logToRemove = currentState.todayHistory.firstWhere(
-        (log) => log['id'] == id,
-        orElse: () => {},
-      );
-
-      if (logToRemove.isEmpty) return;
+      final logIndex = currentState.todayHistory.indexWhere((log) => log['id'] == id);
+      
+      if (logIndex == -1) {
+        debugPrint('⚠️ Log não encontrado na lista!');
+        return;
+      }
+      
+      final logToRemove = currentState.todayHistory[logIndex];
 
       final updatedHistory = List<Map<String, dynamic>>.from(currentState.todayHistory)
         ..removeWhere((log) => log['id'] == id);
@@ -165,6 +174,8 @@ class HomeCubit extends Cubit<HomeState> {
 
       _updateWidget(progress, optimisticIntake, currentState.dailyGoal);
 
+      debugPrint('✅ Emitindo novo estado: intake=$optimisticIntake, progress=$progress, history=${updatedHistory.length} items');
+      
       emit(
         HomeLoaded(
           currentIntake: optimisticIntake,
@@ -178,7 +189,9 @@ class HomeCubit extends Cubit<HomeState> {
 
       try {
         await _waterService.deleteWater(id);
+        debugPrint('✅ API delete sucesso');
       } catch (e) {
+        debugPrint('❌ API delete erro: $e');
         // Reverter se der erro
         emit(currentState);
         _updateWidget(

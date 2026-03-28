@@ -280,7 +280,7 @@ class SettingsView extends StatelessWidget {
     ColorScheme colors,
     SettingsState state,
   ) {
-    final amounts = [50, 100, 200, 300, 500];
+    final amounts = [50, 100, 150, 200, 250, 300, 350, 400, 500, 750, 1000];
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -291,57 +291,87 @@ class SettingsView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Volume do botão central (+)",
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.5),
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Volume do botão central (+)",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.swipe,
+                size: 16,
+                color: colors.onSurface.withValues(alpha: 0.3),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: amounts.map((amount) {
-                final isSelected = state.quickAddAmount == amount.toDouble();
-                return GestureDetector(
-                  onTap: () {
-                    context.read<SettingsCubit>().updateSetting(
-                      'quickAddAmount',
-                      amount.toDouble(),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? colors.primary
-                          : colors.primary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: isSelected
-                          ? null
-                          : Border.all(
-                            color: colors.primary.withValues(alpha: 0.1),
+          ShaderMask(
+            shaderCallback: (Rect bounds) {
+              return LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.white,
+                  Colors.white,
+                  Colors.white,
+                  Colors.white.withValues(alpha: 0),
+                ],
+                stops: const [0.0, 0.7, 0.9, 1.0],
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.dstIn,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ...amounts.map((amount) {
+                    final isSelected = state.quickAddAmount == amount.toDouble();
+                    final label = amount >= 1000 ? "${amount ~/ 1000}L" : "${amount}ml";
+                    return GestureDetector(
+                      onTap: () {
+                        context.read<SettingsCubit>().updateSetting(
+                          'quickAddAmount',
+                          amount.toDouble(),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? colors.primary
+                              : colors.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? null
+                              : Border.all(
+                                color: colors.primary.withValues(alpha: 0.1),
+                              ),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: isSelected ? colors.onPrimary : colors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
-                    ),
-                    child: Text(
-                      "${amount}ml",
-                      style: TextStyle(
-                        color: isSelected ? colors.onPrimary : colors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
+                    );
+                  }),
+                  const SizedBox(width: 20),
+                ],
+              ),
             ),
           ),
-
         ],
       ),
     );

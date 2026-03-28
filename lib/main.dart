@@ -26,8 +26,27 @@ import 'presentation/home/cubit/notification_cubit.dart';
 import 'data/services/settings_service.dart';
 import 'package:flutter/foundation.dart'; // import para kIsWeb
 
+class AppBlocObserver extends BlocObserver {
+  @override
+  void onChange(BlocBase bloc, Change change) {
+    super.onChange(bloc, change);
+    debugPrint('🔄 ${bloc.runtimeType} changed');
+    debugPrint('   Current: ${change.currentState.runtimeType}');
+    debugPrint('   Next: ${change.nextState.runtimeType}');
+  }
+
+  @override
+  void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
+    debugPrint('❌ ${bloc.runtimeType} error: $error');
+    super.onError(bloc, error, stackTrace);
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Ativa o observer para debugar estados
+  Bloc.observer = AppBlocObserver();
 
   await HomeWidget.registerInteractivityCallback(homeWidgetInteractiveCallback);
 

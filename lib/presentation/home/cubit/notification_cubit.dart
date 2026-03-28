@@ -23,7 +23,11 @@ class NotificationCubit extends Cubit<NotificationState> {
   NotificationCubit(this._settingsService) : super(NotificationInitial());
 
   Future<void> loadPreferences() async {
-    emit(NotificationLoading());
+    // Só mostra loading se não tiver dados ainda
+    if (state is! NotificationLoaded) {
+      emit(NotificationLoading());
+    }
+    
     try {
       final data = await _settingsService.getSettings();
       final prefs = NotificationPreferences.fromJson(data['notificationSettings'] ?? {});
@@ -34,7 +38,9 @@ class NotificationCubit extends Cubit<NotificationState> {
         await _notificationService.scheduleHydrationReminders(prefs);
       }
     } catch (e) {
-      emit(NotificationError(e.toString()));
+      if (state is! NotificationLoaded) {
+        emit(NotificationError(e.toString()));
+      }
     }
   }
 

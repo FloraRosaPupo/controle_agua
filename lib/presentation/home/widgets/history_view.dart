@@ -275,8 +275,9 @@ class HistoryView extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
-      onDismissed: (direction) {
-        context.read<HistoryCubit>().deleteWaterLog(log["id"]);
+      confirmDismiss: (direction) async {
+        await context.read<HistoryCubit>().deleteWaterLog(log["id"]);
+        return false; // O cubit já remove da lista
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),

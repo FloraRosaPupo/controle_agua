@@ -8,7 +8,10 @@ class HistoryCubit extends Cubit<HistoryState> {
   HistoryCubit(this._waterService) : super(HistoryInitial());
 
   Future<void> loadHistory({String period = '7d', String? date}) async {
-    emit(HistoryLoading());
+    // Só mostra loading se não tiver dados ainda
+    if (state is! HistoryLoaded) {
+      emit(HistoryLoading());
+    }
 
     try {
       final response = await _waterService.getHistory(period: period, date: date);
@@ -20,11 +23,13 @@ class HistoryCubit extends Cubit<HistoryState> {
           stats: response['stats'],
           selectedPeriod: period,
         ));
-      } else {
+      } else if (state is! HistoryLoaded) {
         emit(HistoryError("Nenhum dado retornado da API."));
       }
     } catch (e) {
-      emit(HistoryError('Erro ao carregar histórico: $e'));
+      if (state is! HistoryLoaded) {
+        emit(HistoryError('Erro ao carregar histórico: $e'));
+      }
     }
   }
 
@@ -32,12 +37,22 @@ class HistoryCubit extends Cubit<HistoryState> {
     if (state is HistoryLoaded) {
       final currentState = state as HistoryLoaded;
       
+      // Otimista: remove da lista antes de chamar API
+      final updatedLogs = List<dynamic>.from(currentState.logs)
+        ..removeWhere((log) => log['id'] == id);
+      
+      emit(HistoryLoaded(
+        logs: updatedLogs,
+        dailyGoal: currentState.dailyGoal,
+        stats: currentState.stats,
+        selectedPeriod: currentState.selectedPeriod,
+      ));
+      
       try {
         await _waterService.deleteWater(id);
-        // Recarregar o histórico para atualizar metas e logs
-        await loadHistory(period: currentState.selectedPeriod);
       } catch (e) {
-        emit(HistoryError('Erro ao excluir: $e'));
+        // Reverter se der erro
+        emit(currentState);
       }
     }
   }

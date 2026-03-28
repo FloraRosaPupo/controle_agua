@@ -4,6 +4,9 @@ import 'package:bebeu/core/theme/app_theme.dart';
 
 class AddWaterButton extends StatefulWidget {
   final VoidCallback? onPressed;
+  
+  /// Callback para adicionar quantidade personalizada
+  final void Function(int ml)? onCustomAmount;
 
   /// Volume exibido no feedback visual (ex.: "+ 50 ml").
   final int milliliters;
@@ -11,6 +14,7 @@ class AddWaterButton extends StatefulWidget {
   const AddWaterButton({
     super.key,
     this.onPressed,
+    this.onCustomAmount,
     this.milliliters = 50,
   });
 
@@ -64,6 +68,21 @@ class _AddWaterButtonState extends State<AddWaterButton>
     setState(() => _showBurst = true);
     _controller.forward(from: 0);
     widget.onPressed?.call();
+  }
+
+  void _showCustomAmountModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CustomAmountModal(
+        initialAmount: widget.milliliters,
+        onConfirm: (amount) {
+          widget.onCustomAmount?.call(amount);
+          setState(() => _showBurst = true);
+          _controller.forward(from: 0);
+        },
+      ),
+    );
   }
 
   @override
@@ -126,15 +145,192 @@ class _AddWaterButtonState extends State<AddWaterButton>
               ),
             ],
           ),
-          child: FloatingActionButton(
-            onPressed: _handleTap,
-            backgroundColor: colors.primary,
-            elevation: 0,
-            shape: const CircleBorder(),
-            child: const Icon(Icons.add, color: Colors.black, size: 32),
+          child: GestureDetector(
+            onLongPress: _showCustomAmountModal,
+            child: FloatingActionButton(
+              onPressed: _handleTap,
+              backgroundColor: colors.primary,
+              elevation: 0,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, color: Colors.black, size: 32),
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CustomAmountModal extends StatefulWidget {
+  final int initialAmount;
+  final void Function(int amount) onConfirm;
+
+  const _CustomAmountModal({
+    required this.initialAmount,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_CustomAmountModal> createState() => _CustomAmountModalState();
+}
+
+class _CustomAmountModalState extends State<_CustomAmountModal> {
+  late double _amount;
+
+  @override
+  void initState() {
+    super.initState();
+    _amount = widget.initialAmount.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colors.onSurface.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Personalizar Volume",
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Arraste para escolher a quantidade",
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.water_drop, color: colors.primary, size: 32),
+                const SizedBox(width: 12),
+                Text(
+                  "${_amount.toInt()} ml",
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: colors.primary,
+              inactiveTrackColor: colors.primary.withValues(alpha: 0.2),
+              thumbColor: colors.primary,
+              overlayColor: colors.primary.withValues(alpha: 0.2),
+              trackHeight: 8,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
+            ),
+            child: Slider(
+              value: _amount,
+              min: 50,
+              max: 1000,
+              divisions: 19,  // (1000 - 50) / 50 = 19 divisões
+              onChanged: (value) => setState(() => _amount = value),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "50 ml",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                Text(
+                  "1000 ml",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: BorderSide(color: colors.primary),
+                  ),
+                  child: Text(
+                    "Cancelar",
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onConfirm(_amount.toInt());
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Adicionar",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }

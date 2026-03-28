@@ -14,7 +14,11 @@ class _AlertsViewState extends State<AlertsView> {
   @override
   void initState() {
     super.initState();
-    context.read<NotificationCubit>().loadPreferences();
+    // Só carrega se ainda não tem dados
+    final state = context.read<NotificationCubit>().state;
+    if (state is! NotificationLoaded) {
+      context.read<NotificationCubit>().loadPreferences();
+    }
   }
 
   void _updatePrefs(NotificationPreferences prefs) {

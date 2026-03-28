@@ -21,8 +21,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -57,118 +55,112 @@ class _HomePageState extends State<HomePage> {
     HomeLoaded state,
   ) {
     return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background Glow
-          Container(
-            width: 240,
-            height: 240,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.1),
-                  blurRadius: 40,
-                  spreadRadius: 10,
-                ),
-              ],
-            ),
-          ),
-          // Circular Progress Indicator
-          SizedBox(
-            width: 240,
-            height: 240,
-            child: CircularProgressIndicator(
-              value: state.progress,
-              strokeWidth: 12,
-              backgroundColor: colors.primary.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
-              strokeCap: StrokeCap.round,
-            ),
-          ),
-          // Inner Info
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: () => context.read<HomeCubit>().addWater(-50),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.error.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.remove, color: colors.error, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.water_drop, color: colors.primary, size: 32),
-                  const SizedBox(width: 16),
-                  GestureDetector(
-                    onTap: () => context.read<HomeCubit>().addWater(50),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.add, color: colors.primary, size: 20),
-                    ),
+      child: GestureDetector(
+        onTap: () => _showGoalSliderModal(context, state.dailyGoal),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background Glow
+            Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primary.withValues(alpha: 0.1),
+                    blurRadius: 40,
+                    spreadRadius: 10,
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => context.read<HomeCubit>().addWater(50),
-                child: Text(
+            ),
+            // Circular Progress Indicator
+            SizedBox(
+              width: 240,
+              height: 240,
+              child: CircularProgressIndicator(
+                value: state.progress,
+                strokeWidth: 12,
+                backgroundColor: colors.primary.withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+                strokeCap: StrokeCap.round,
+              ),
+            ),
+            // Inner Info
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.water_drop, color: colors.primary, size: 32),
+                const SizedBox(height: 8),
+                Text(
                   "${state.currentIntake}",
                   style: theme.textTheme.headlineLarge?.copyWith(
                     fontSize: 54,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              Text(
-                "DE ${state.dailyGoal}ml",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  color: colors.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: colors.primary.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Text(
-                  "${state.percentage}% DO OBJETIVO",
-                  style: TextStyle(
-                    color: colors.primary,
+                Text(
+                  "DE ${state.dailyGoal}ml",
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    letterSpacing: 1.1,
+                    color: colors.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colors.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "${state.percentage}% da meta",
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.edit, color: colors.primary, size: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  void _showGoalSliderModal(BuildContext ctx, int currentGoal) {
+    final settingsCubit = ctx.read<SettingsCubit>();
+    final homeCubit = ctx.read<HomeCubit>();
+
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _GoalSliderModal(
+        currentGoal: currentGoal,
+        onConfirm: (newGoal) async {
+          await settingsCubit.updateSetting('dailyGoal', newGoal);
+          await homeCubit.refreshTodayData();
+        },
+      ),
+    );
+  }
 
   Widget _buildAddButton(ColorScheme colors, SettingsState settingsState) {
     return Container(
@@ -189,7 +181,9 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       child: ElevatedButton.icon(
-        onPressed: () => context.read<HomeCubit>().addWater(settingsState.quickAddAmount.toInt()),
+        onPressed: () => context.read<HomeCubit>().addWater(
+          settingsState.quickAddAmount.toInt(),
+        ),
         icon: const Icon(Icons.add_circle, color: Colors.black),
         label: const Text(
           "Adicionar Água",
@@ -215,9 +209,9 @@ class _HomePageState extends State<HomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildSelectCard(theme, colors, "200", "ML"),
-        _buildSelectCard(theme, colors, "350", "ML"),
-        _buildSelectCard(theme, colors, "500", "ML"),
+        _buildSelectCard(theme, colors, 200, "🥛", "Copo"),
+        _buildSelectCard(theme, colors, 500, "🍶", "Garrafa"),
+        _buildSelectCard(theme, colors, 1000, "🫗", "Jarra"),
       ],
     );
   }
@@ -225,15 +219,18 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSelectCard(
     ThemeData theme,
     ColorScheme colors,
-    String amount,
-    String unit,
+    int amount,
+    String emoji,
+    String label,
   ) {
+    final displayAmount = amount >= 1000 ? "${amount ~/ 1000}L" : "${amount}ml";
+
     return Expanded(
       child: GestureDetector(
-        onTap: () => context.read<HomeCubit>().addWater(int.parse(amount)),
+        onTap: () => context.read<HomeCubit>().addWater(amount),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(16),
@@ -241,21 +238,23 @@ class _HomePageState extends State<HomePage> {
           ),
           child: Column(
             children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(height: 8),
               Text(
-                amount,
+                displayAmount,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: colors.primary,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
-                unit,
+                label,
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface.withValues(alpha: 0.3),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: colors.onSurface.withValues(alpha: 0.4),
                 ),
               ),
             ],
@@ -266,25 +265,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHistoryHeader(ThemeData theme, ColorScheme colors) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "Histórico Hoje",
-          style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
-        ),
-        TextButton(
-          onPressed: () {},
-          child: Text(
-            "VER TODOS",
-            style: TextStyle(
-              color: colors.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ],
+    return Text(
+      "Histórico Hoje",
+      style: theme.textTheme.titleLarge?.copyWith(fontSize: 22),
     );
   }
 
@@ -306,8 +289,9 @@ class _HomePageState extends State<HomePage> {
         ),
         child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
-      onDismissed: (direction) {
-        context.read<HomeCubit>().deleteWaterLog(log["id"]);
+      confirmDismiss: (direction) async {
+        await context.read<HomeCubit>().deleteWaterLog(log["id"]);
+        return false; // O cubit já remove da lista, não precisa do Dismissible remover
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -336,7 +320,9 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log["id"].startsWith('temp_') ? "Adicionando..." : log["type"],
+                  log["id"].toString().startsWith('temp_')
+                      ? "Adicionando..."
+                      : log["type"],
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -357,13 +343,11 @@ class _HomePageState extends State<HomePage> {
               log["amount"] >= 0 ? "+${log["amount"]}ml" : "${log["amount"]}ml",
               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
             ),
-
           ],
         ),
       ),
     );
   }
-
 
   Widget _buildHomeContent(ThemeData theme, ColorScheme colors) {
     return BlocBuilder<HomeCubit, HomeState>(
@@ -425,8 +409,10 @@ class _HomePageState extends State<HomePage> {
           floatingActionButton: AddWaterButton(
             milliliters: quickAddMl,
             onPressed: () => context.read<HomeCubit>().addWater(quickAddMl),
+            onCustomAmount: (ml) => context.read<HomeCubit>().addWater(ml),
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
           bottomNavigationBar: BottomAppBar(
             padding: const EdgeInsets.symmetric(vertical: 8),
             height: 70,
@@ -439,7 +425,12 @@ class _HomePageState extends State<HomePage> {
                 _buildNavItem(0, Icons.water_drop_rounded, "HOJE", colors),
                 _buildNavItem(1, Icons.bar_chart_rounded, "HISTÓRICO", colors),
                 const SizedBox(width: 48),
-                _buildNavItem(2, Icons.notifications_rounded, "ALERTAS", colors),
+                _buildNavItem(
+                  2,
+                  Icons.notifications_rounded,
+                  "ALERTAS",
+                  colors,
+                ),
                 _buildNavItem(3, Icons.settings_rounded, "AJUSTES", colors),
               ],
             ),
@@ -460,7 +451,6 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
-
 
   Widget _buildNavItem(
     int index,
@@ -498,6 +488,253 @@ class _HomePageState extends State<HomePage> {
                   ? colors.primary
                   : colors.onSurface.withValues(alpha: 0.3),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalSliderModal extends StatefulWidget {
+  final int currentGoal;
+  final void Function(int goal) onConfirm;
+
+  const _GoalSliderModal({required this.currentGoal, required this.onConfirm});
+
+  @override
+  State<_GoalSliderModal> createState() => _GoalSliderModalState();
+}
+
+class _GoalSliderModalState extends State<_GoalSliderModal> {
+  late double _goal;
+
+  @override
+  void initState() {
+    super.initState();
+    _goal = widget.currentGoal.toDouble().clamp(500, 5000);
+  }
+
+  String _formatGoal(double value) {
+    if (value >= 1000) {
+      final liters = value / 1000;
+      return liters == liters.toInt()
+          ? "${liters.toInt()} L"
+          : "${liters.toStringAsFixed(1)} L";
+    }
+    return "${value.toInt()} ml";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colors.onSurface.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Ajustar Meta Diária",
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Quanto você quer beber por dia?",
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.water_drop, color: colors.primary, size: 40),
+                const SizedBox(width: 16),
+                Text(
+                  _formatGoal(_goal),
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                    fontSize: 42,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: colors.primary,
+              inactiveTrackColor: colors.primary.withValues(alpha: 0.2),
+              thumbColor: colors.primary,
+              overlayColor: colors.primary.withValues(alpha: 0.2),
+              trackHeight: 8,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
+            ),
+            child: Slider(
+              value: _goal,
+              min: 500,
+              max: 5000,
+              divisions: 90,
+              onChanged: (value) => setState(() => _goal = value),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "500 ml",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                Text(
+                  "5 L",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: BorderSide(color: colors.primary),
+                  ),
+                  child: Text(
+                    "Cancelar",
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onConfirm(_goal.toInt());
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Salvar",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _SwipeToDeleteItem extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onDelete;
+
+  const _SwipeToDeleteItem({
+    super.key,
+    required this.child,
+    required this.onDelete,
+  });
+
+  @override
+  State<_SwipeToDeleteItem> createState() => _SwipeToDeleteItemState();
+}
+
+class _SwipeToDeleteItemState extends State<_SwipeToDeleteItem> {
+  double _dragExtent = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onHorizontalDragUpdate: (details) {
+        setState(() {
+          _dragExtent += details.delta.dx;
+          _dragExtent = _dragExtent.clamp(-100.0, 0.0);
+        });
+      },
+      onHorizontalDragEnd: (details) {
+        if (_dragExtent < -60) {
+          widget.onDelete();
+        }
+        setState(() {
+          _dragExtent = 0;
+        });
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              child: Icon(
+                Icons.delete_outline,
+                color: Colors.red.withValues(
+                  alpha: _dragExtent < -30 ? 1.0 : 0.5,
+                ),
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: Offset(_dragExtent, 0),
+            child: widget.child,
           ),
         ],
       ),
