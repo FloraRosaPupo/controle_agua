@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class NotificationPreferences {
@@ -18,7 +19,17 @@ class NotificationPreferences {
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     // Backend (Prisma): 0=Dom, 1=Seg...6=Sáb
     // Flutter (DateTime): 1=Seg...7=Dom
-    final dynamic dow = json['daysOfWeek'];
+    dynamic dow = json['daysOfWeek'];
+    
+    // Se vier como String JSON, faz o parse
+    if (dow is String) {
+      try {
+        dow = jsonDecode(dow);
+      } catch (_) {
+        dow = null;
+      }
+    }
+    
     final List<int> rawDays;
     if (dow is! List || dow.isEmpty) {
       rawDays = [0, 1, 2, 3, 4, 5, 6];

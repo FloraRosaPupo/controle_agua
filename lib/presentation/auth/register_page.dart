@@ -137,6 +137,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: _controller.nameController,
                     decoration: InputDecoration(
                       hintText: "Seu nome",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
                       prefixIcon: Icon(
                         Icons.person_outline,
                         color: colors.primary.withValues(alpha: 0.5),
@@ -152,6 +155,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: _controller.emailController,
                     decoration: InputDecoration(
                       hintText: "seu@email.com",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
                       prefixIcon: Icon(
                         Icons.alternate_email,
                         color: colors.primary.withValues(alpha: 0.5),
@@ -168,6 +174,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     obscureText: !_isPasswordVisible,
                     decoration: InputDecoration(
                       hintText: "••••••••",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
                       prefixIcon: Icon(
                         Icons.lock_outline,
                         color: colors.primary.withValues(alpha: 0.5),
@@ -318,7 +327,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           foregroundColor: Colors.white,
                           minimumSize: Size(
                             double.infinity,
-                            state is RegisterLoading ? 88 : 56,
+                            55
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

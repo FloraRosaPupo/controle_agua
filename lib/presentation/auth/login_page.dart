@@ -119,8 +119,11 @@ class _LoginPageState extends State<LoginPage> {
 
                   TextField(
                     controller: _controller.emailController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: "seu@email.com",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
                     ),
                   ),
 
@@ -140,6 +143,9 @@ class _LoginPageState extends State<LoginPage> {
                     obscureText: !_controller.isPasswordVisible,
                     decoration: InputDecoration(
                       hintText: "••••••••",
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                      ),
                       suffixIcon: IconButton(
                         onPressed: () {
                           _controller.togglePasswordVisibility(() {
@@ -163,7 +169,7 @@ class _LoginPageState extends State<LoginPage> {
                     builder: (context, state) {
                       return SizedBox(
                         width: double.infinity,
-                        height: state is LoginLoading ? 88 : 55,
+                        height: 55,
                         child: ElevatedButton(
                           onPressed: state is LoginLoading
                               ? null
