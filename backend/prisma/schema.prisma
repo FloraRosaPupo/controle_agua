@@ -13,9 +13,11 @@ model User {
   email         String   @unique
   password      String
   dailyGoal     Int      @default(2000)
+  quickAddAmount Int     @default(200)
   theme         String   @default("system")
   dailyReminder Boolean  @default(true)
   vibration     Boolean  @default(true)
+
   createdAt     DateTime @default(now())
 
   waterLogs            WaterLog[]

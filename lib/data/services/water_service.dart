@@ -50,4 +50,16 @@ class WaterService {
       );
     }
   }
+
+  Future<bool> deleteWater(String id) async {
+    try {
+      final response = await _apiClient.dio.delete('/water/$id');
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      throw Exception(
+        'Erro ao excluir registro: ${e.response?.data['error'] ?? e.message}',
+      );
+    }
+  }
 }
+

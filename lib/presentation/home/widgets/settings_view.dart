@@ -274,6 +274,80 @@ class SettingsView extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickAddSection(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colors,
+    SettingsState state,
+  ) {
+    final amounts = [50, 100, 200, 300, 500];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Volume do botão central (+)",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurface.withValues(alpha: 0.5),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: amounts.map((amount) {
+                final isSelected = state.quickAddAmount == amount.toDouble();
+                return GestureDetector(
+                  onTap: () {
+                    context.read<SettingsCubit>().updateSetting(
+                      'quickAddAmount',
+                      amount.toDouble(),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? colors.primary
+                          : colors.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected
+                          ? null
+                          : Border.all(
+                            color: colors.primary.withValues(alpha: 0.1),
+                          ),
+                    ),
+                    child: Text(
+                      "${amount}ml",
+                      style: TextStyle(
+                        color: isSelected ? colors.onPrimary : colors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -319,7 +393,10 @@ class SettingsView extends StatelessWidget {
               ),
               _buildSectionTitle("Meta de Hidratação", theme, colors),
               _buildGoalSection(context, theme, colors, state),
+              _buildSectionTitle("Toque Rápido (+)", theme, colors),
+              _buildQuickAddSection(context, theme, colors, state),
               _buildSectionTitle("Preferências", theme, colors),
+
               _buildToggleTile(
                 context: context,
                 icon: Icons.dark_mode_outlined,

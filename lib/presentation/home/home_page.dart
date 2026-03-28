@@ -9,6 +9,7 @@ import './widgets/alerts_view.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 import 'cubit/history_cubit.dart';
+import 'cubit/settings_cubit.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,8 +21,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  /// Volume do toque rápido no FAB central (feedback "+ N ml" usa o mesmo valor).
-  static const int _fabQuickAddMl = 50;
+
 
   @override
   void initState() {
@@ -91,13 +91,45 @@ class _HomePageState extends State<HomePage> {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.water_drop, color: colors.primary, size: 32),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.read<HomeCubit>().addWater(-50),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colors.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.remove, color: colors.error, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.water_drop, color: colors.primary, size: 32),
+                  const SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: () => context.read<HomeCubit>().addWater(50),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.add, color: colors.primary, size: 20),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
-              Text(
-                "${state.currentIntake}",
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontSize: 54,
-                  fontWeight: FontWeight.w900,
+              GestureDetector(
+                onTap: () => context.read<HomeCubit>().addWater(50),
+                child: Text(
+                  "${state.currentIntake}",
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontSize: 54,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               Text(
@@ -108,7 +140,7 @@ class _HomePageState extends State<HomePage> {
                   color: colors.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -137,7 +169,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAddButton(ColorScheme colors) {
+
+  Widget _buildAddButton(ColorScheme colors, SettingsState settingsState) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -156,7 +189,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       child: ElevatedButton.icon(
-        onPressed: () => context.read<HomeCubit>().addWater(200),
+        onPressed: () => context.read<HomeCubit>().addWater(settingsState.quickAddAmount.toInt()),
         icon: const Icon(Icons.add_circle, color: Colors.black),
         label: const Text(
           "Adicionar Água",
@@ -260,58 +293,77 @@ class _HomePageState extends State<HomePage> {
     ColorScheme colors,
     Map<String, dynamic> log,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+    return Dismissible(
+      key: Key(log["id"].toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.local_drink_outlined,
-              color: colors.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                log["type"],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+      onDismissed: (direction) {
+        context.read<HomeCubit>().deleteWaterLog(log["id"]);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 2),
-              Text(
-                log["time"],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: 0.4),
-                ),
+              child: Icon(
+                Icons.local_drink_outlined,
+                color: colors.primary,
+                size: 24,
               ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            "+${log["amount"]}ml",
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-          ),
-        ],
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  log["id"].startsWith('temp_') ? "Adicionando..." : log["type"],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  log["time"],
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              log["amount"] >= 0 ? "+${log["amount"]}ml" : "${log["amount"]}ml",
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+
+          ],
+        ),
       ),
     );
   }
+
 
   Widget _buildHomeContent(ThemeData theme, ColorScheme colors) {
     return BlocBuilder<HomeCubit, HomeState>(
@@ -331,7 +383,10 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 24),
                 _buildCircularProgress(theme, colors, state),
                 const SizedBox(height: 50),
-                _buildAddButton(colors),
+                BlocBuilder<SettingsCubit, SettingsState>(
+                  builder: (context, settingsState) =>
+                      _buildAddButton(colors, settingsState),
+                ),
                 const SizedBox(height: 24),
                 _buildQuickSelect(theme, colors),
                 const SizedBox(height: 40),
@@ -362,45 +417,50 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return Scaffold(
-      extendBody: true,
-      floatingActionButton: AddWaterButton(
-        milliliters: _fabQuickAddMl,
-        onPressed: () =>
-            context.read<HomeCubit>().addWater(_fabQuickAddMl),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        height: 70,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        color: colors.surface,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, Icons.water_drop_rounded, "HOJE", colors),
-            _buildNavItem(1, Icons.bar_chart_rounded, "HISTÓRICO", colors),
-            const SizedBox(width: 48),
-            _buildNavItem(2, Icons.notifications_rounded, "ALERTAS", colors),
-            _buildNavItem(3, Icons.settings_rounded, "AJUSTES", colors),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            _buildHomeContent(theme, colors),
-            const HistoryView(),
-            const AlertsView(),
-            const SettingsView(),
-          ],
-        ),
-      ),
+    return BlocBuilder<SettingsCubit, SettingsState>(
+      builder: (context, settingsState) {
+        final quickAddMl = settingsState.quickAddAmount.toInt();
+        return Scaffold(
+          extendBody: true,
+          floatingActionButton: AddWaterButton(
+            milliliters: quickAddMl,
+            onPressed: () => context.read<HomeCubit>().addWater(quickAddMl),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          bottomNavigationBar: BottomAppBar(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            height: 70,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
+            color: colors.surface,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(0, Icons.water_drop_rounded, "HOJE", colors),
+                _buildNavItem(1, Icons.bar_chart_rounded, "HISTÓRICO", colors),
+                const SizedBox(width: 48),
+                _buildNavItem(2, Icons.notifications_rounded, "ALERTAS", colors),
+                _buildNavItem(3, Icons.settings_rounded, "AJUSTES", colors),
+              ],
+            ),
+          ),
+          body: SafeArea(
+            bottom: false,
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                _buildHomeContent(theme, colors),
+                const HistoryView(),
+                const AlertsView(),
+                const SettingsView(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
+
 
   Widget _buildNavItem(
     int index,

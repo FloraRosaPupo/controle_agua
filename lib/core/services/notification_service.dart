@@ -429,6 +429,14 @@ class NotificationService {
     await _scheduleChain;
   }
 
+  static const List<String> _reminderMessages = [
+    'Hora de beber água! Mantenha seu corpo hidratado.',
+    'Beba um copo d\'água agora! Se cuida.',
+    'Não esqueça da sua meta! Um pequeno gole faz diferença.',
+    'Hidratação é saúde! Que tal um pouco d\'água agora?',
+    'Água é vida! Vamos bater a meta de hoje?',
+  ];
+
   Future<void> _scheduleHydrationRemindersImpl(
     NotificationPreferences prefs,
   ) async {
@@ -485,14 +493,17 @@ class NotificationService {
         stepMinutes: stepMinutes,
         maxMarks: maxAlarms,
       );
+      int messageIndex = 0;
       for (final total in marks) {
         final hour = total ~/ 60;
         final minute = total % 60;
+        final message = _reminderMessages[messageIndex % _reminderMessages.length];
+        messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
           id: total,
-          title: 'Hora de beber água!',
-          body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
+          title: 'Bebeu?',
+          body: message,
           scheduledDate: _nextDailyClockTime(hour, minute),
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
@@ -524,14 +535,17 @@ class NotificationService {
         endTotalMinutes: endTotalMinutes,
         stepMinutes: stepMinutes,
       );
+      int messageIndex = 0;
       for (final s in slots) {
         final hour = s.totalMinutes ~/ 60;
         final minute = s.totalMinutes % 60;
+        final message = _reminderMessages[messageIndex % _reminderMessages.length];
+        messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
           id: s.weekday * 1440 + s.totalMinutes,
-          title: 'Hora de beber água!',
-          body: 'Mantenha seu corpo hidratado. Tome um copo d\'água agora.',
+          title: 'Bebeu?',
+          body: message,
           scheduledDate: _nextWeekdayOccurrence(s.weekday, hour, minute),
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
@@ -556,6 +570,7 @@ class NotificationService {
         );
       }
     }
+
 
     _debugLogScheduleSummary(scheduledCount, prefs);
     _startDebugNearFireMonitoring();

@@ -18,6 +18,7 @@ class HomeCubit extends Cubit<HomeState> {
     var todayHistory = data.logs
         .map(
           (log) => {
+            "id": log.id,
             "type": "Água",
             "amount": log.amount,
             "time": log.date.toLocal().toString().substring(11, 16),
@@ -93,6 +94,7 @@ class HomeCubit extends Cubit<HomeState> {
         currentState.todayHistory,
       );
       optimisticHistory.insert(0, {
+        "id": "temp_${DateTime.now().millisecondsSinceEpoch}",
         "type": "Água",
         "amount": ml,
         "time": "Agora",
@@ -124,6 +126,8 @@ class HomeCubit extends Cubit<HomeState> {
 
       try {
         await _waterService.addWater(ml);
+        // Recarregar para pegar os IDs corretos do banco
+        await loadTodayData();
       } catch (e) {
         // Se a API falhar, reverter de volta pra visão anterior
         _updateWidget(
@@ -133,6 +137,55 @@ class HomeCubit extends Cubit<HomeState> {
         );
         emit(currentState);
         // Opcional: Emitir um erro rapidinho ou Snackbar, precisaria ser tratado na View.
+      }
+    }
+  }
+
+  Future<void> deleteWaterLog(String id) async {
+    if (state is HomeLoaded) {
+      final currentState = state as HomeLoaded;
+
+      // Visão otimista: remove localmente primeiro
+      final Map<String, dynamic> logToRemove = currentState.todayHistory.firstWhere(
+        (log) => log['id'] == id,
+        orElse: () => {},
+      );
+
+      if (logToRemove.isEmpty) return;
+
+      final updatedHistory = List<Map<String, dynamic>>.from(currentState.todayHistory)
+        ..removeWhere((log) => log['id'] == id);
+
+      final int amountToRemove = logToRemove['amount'] as int? ?? 0;
+      final optimisticIntake = currentState.currentIntake - amountToRemove;
+
+      final progress = currentState.dailyGoal == 0
+          ? 0.0
+          : (optimisticIntake / currentState.dailyGoal).clamp(0.0, 1.0);
+
+      _updateWidget(progress, optimisticIntake, currentState.dailyGoal);
+
+      emit(
+        HomeLoaded(
+          currentIntake: optimisticIntake,
+          dailyGoal: currentState.dailyGoal,
+          userName: currentState.userName,
+          progress: progress,
+          percentage: (progress * 100).toInt(),
+          todayHistory: updatedHistory,
+        ),
+      );
+
+      try {
+        await _waterService.deleteWater(id);
+      } catch (e) {
+        // Reverter se der erro
+        emit(currentState);
+        _updateWidget(
+          currentState.progress,
+          currentState.currentIntake,
+          currentState.dailyGoal,
+        );
       }
     }
   }

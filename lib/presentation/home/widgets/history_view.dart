@@ -34,7 +34,7 @@ class HistoryView extends StatelessWidget {
                 const SizedBox(height: 32),
                 _buildChartSection(theme, colors, state),
                 const SizedBox(height: 32),
-                _buildDailyLogs(theme, colors, state),
+                _buildDailyLogs(context, theme, colors, state),
                 const SizedBox(height: 100),
               ],
             ),
@@ -212,16 +212,7 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyLogs(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
-    // Agrupar logs por dia para a lista "REGISTROS DIÁRIOS"
-    final Map<String, int> dailyTotals = {};
-    for (var log in state.logs) {
-      final dateStr = (log['date'] as String).split('T')[0];
-      dailyTotals[dateStr] = (dailyTotals[dateStr] ?? 0) + (log['amount'] as int);
-    }
-
-    final sortedDays = dailyTotals.keys.toList()..sort((a, b) => b.compareTo(a));
-
+  Widget _buildDailyLogs(BuildContext context, ThemeData theme, ColorScheme colors, HistoryLoaded state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -230,7 +221,7 @@ class HistoryView extends StatelessWidget {
             Icon(Icons.history, size: 16, color: colors.primary),
             const SizedBox(width: 8),
             Text(
-              "REGISTROS DIÁRIOS",
+              "ÚLTIMOS REGISTROS",
               style: theme.textTheme.labelSmall?.copyWith(
                 color: colors.primary,
                 fontWeight: FontWeight.bold,
@@ -240,21 +231,25 @@ class HistoryView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        ...sortedDays.take(7).map((day) {
-          final amount = dailyTotals[day]!;
-          final date = DateTime.parse(day);
-          final percent = ((amount / state.dailyGoal) * 100).toInt();
-          final isMet = amount >= state.dailyGoal;
-          
+        if (state.logs.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Text("Nenhum registro encontrado no período."),
+            ),
+          ),
+        ...state.logs.map((log) {
+          final date = DateTime.parse(log['date']);
           return _buildHistoryItem(
-            theme, 
-            colors, 
+            context,
+            theme,
+            colors,
             {
-              "type": "${_getShortDayName(date)} ${date.day}",
-              "time": "${percent}% da meta",
-              "amount": _formatAmount(amount).replaceAll('ml', ''),
-              "isMet": isMet,
-            }
+              "id": log['id'],
+              "type": "Água",
+              "time": "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
+              "amount": log['amount'],
+            },
           );
         }),
       ],
@@ -262,78 +257,85 @@ class HistoryView extends StatelessWidget {
   }
 
   Widget _buildHistoryItem(
+    BuildContext context,
     ThemeData theme,
     ColorScheme colors,
     Map<String, dynamic> log,
   ) {
-    final bool isMet = log["isMet"] ?? false;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+    return Dismissible(
+      key: Key(log["id"].toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
+      onDismissed: (direction) {
+        context.read<HistoryCubit>().deleteWaterLog(log["id"]);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.local_drink_outlined,
+                color: colors.primary,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              Icons.local_drink_outlined,
-              color: colors.primary,
-              size: 24,
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  log["type"],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  log["time"],
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                log["type"],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                log["time"],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: 0.4),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Text(
-                "${log["amount"]}ml",
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-              ),
-              if (isMet) ...[
-                const SizedBox(width: 8),
-                Icon(Icons.check_circle, color: colors.primary, size: 20),
-              ]
-            ],
-          ),
-        ],
+            const Spacer(),
+            Text(
+              "+${log["amount"]}ml",
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   String _getShortDayName(DateTime date) {
     const names = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
     return names[date.weekday - 1];
   }
 
-  String _formatAmount(int amount) {
-    return NumberFormat("#,###", "pt_BR").format(amount).replaceAll(',', '.');
-  }
 }

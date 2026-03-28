@@ -22,9 +22,10 @@ export async function addWater(req: AuthRequest, res: Response) {
     const { amount } = req.body
     const userId = req.userId
 
-    if (typeof amount !== 'number' || amount <= 0) {
+    if (typeof amount !== 'number' || amount === 0) {
         return res.status(400).json({ error: "Quantidade inválida" })
     }
+
 
     try {
         await prisma.waterLog.create({
@@ -149,3 +150,31 @@ export async function today(req: AuthRequest, res: Response) {
         logs
     })
 }
+
+export async function deleteWater(req: AuthRequest, res: Response) {
+    const id = req.params.id as string
+    const userId = req.userId
+
+    try {
+        const log = await prisma.waterLog.findUnique({
+            where: { id: id }
+        })
+
+        if (!log) {
+            return res.status(404).json({ error: "Registro não encontrado" })
+        }
+
+        if (log.userId !== userId) {
+            return res.status(403).json({ error: "Não autorizado" })
+        }
+
+        await prisma.waterLog.delete({
+            where: { id: id }
+        })
+
+        res.json({ success: true })
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao excluir registro" })
+    }
+}
+

@@ -8,6 +8,7 @@ class SettingsState {
   final String name;
   final String email;
   final double dailyGoal;
+  final double quickAddAmount;
   final String theme;
   final bool dailyReminder;
   final bool vibration;
@@ -17,6 +18,7 @@ class SettingsState {
     this.name = '',
     this.email = '',
     this.dailyGoal = 2000,
+    this.quickAddAmount = 200,
     this.theme = 'system',
     this.dailyReminder = true,
     this.vibration = true,
@@ -27,6 +29,7 @@ class SettingsState {
     String? name,
     String? email,
     double? dailyGoal,
+    double? quickAddAmount,
     String? theme,
     bool? dailyReminder,
     bool? vibration,
@@ -36,6 +39,7 @@ class SettingsState {
       name: name ?? this.name,
       email: email ?? this.email,
       dailyGoal: dailyGoal ?? this.dailyGoal,
+      quickAddAmount: quickAddAmount ?? this.quickAddAmount,
       theme: theme ?? this.theme,
       dailyReminder: dailyReminder ?? this.dailyReminder,
       vibration: vibration ?? this.vibration,
@@ -43,6 +47,7 @@ class SettingsState {
     );
   }
 }
+
 
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsService _settingsService;
@@ -77,6 +82,7 @@ class SettingsCubit extends Cubit<SettingsState> {
           name: data['name'] ?? '',
           email: data['email'] ?? '',
           dailyGoal: _clampDailyGoal((data['dailyGoal'] ?? 2000).toDouble()),
+          quickAddAmount: (data['quickAddAmount'] ?? 200).toDouble(),
           theme: themeStr,
           dailyReminder: data['dailyReminder'] ?? true,
           vibration: data['vibration'] ?? true,
@@ -109,6 +115,8 @@ class SettingsCubit extends Cubit<SettingsState> {
       emit(state.copyWith(
         dailyGoal: _clampDailyGoal((value as num).toDouble()),
       ));
+    } else if (key == 'quickAddAmount') {
+      emit(state.copyWith(quickAddAmount: (value as num).toDouble()));
     } else if (key == 'name') {
       emit(state.copyWith(name: value as String));
     }

@@ -16,6 +16,7 @@ export async function getSettings(req: Request, res: Response) {
                 name: true,
                 email: true,
                 dailyGoal: true,
+                quickAddAmount: true,
                 theme: true,
                 dailyReminder: true,
                 vibration: true,
@@ -52,7 +53,7 @@ export async function updateSettings(req: Request, res: Response) {
         }
 
         // Pega do body os campos que o app enviar (todos são opcionais para o update)
-        const { name, dailyGoal, theme, dailyReminder, vibration, notifications } = req.body;
+        const { name, dailyGoal, quickAddAmount, theme, dailyReminder, vibration, notifications } = req.body;
 
         // Update user fields (without notificationSettings - handled separately)
         const updatedUser = await prisma.user.update({
@@ -60,6 +61,7 @@ export async function updateSettings(req: Request, res: Response) {
             data: {
                 name: name !== undefined ? String(name) : undefined,
                 dailyGoal: dailyGoal !== undefined ? Number(dailyGoal) : undefined,
+                quickAddAmount: quickAddAmount !== undefined ? Number(quickAddAmount) : undefined,
                 theme: theme !== undefined ? String(theme) : undefined,
                 dailyReminder: dailyReminder !== undefined ? Boolean(dailyReminder) : undefined,
                 vibration: vibration !== undefined ? Boolean(vibration) : undefined,
@@ -68,6 +70,7 @@ export async function updateSettings(req: Request, res: Response) {
                 name: true,
                 email: true,
                 dailyGoal: true,
+                quickAddAmount: true,
                 theme: true,
                 dailyReminder: true,
                 vibration: true,

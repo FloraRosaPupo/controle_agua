@@ -27,4 +27,19 @@ class HistoryCubit extends Cubit<HistoryState> {
       emit(HistoryError('Erro ao carregar histórico: $e'));
     }
   }
+
+  Future<void> deleteWaterLog(String id) async {
+    if (state is HistoryLoaded) {
+      final currentState = state as HistoryLoaded;
+      
+      try {
+        await _waterService.deleteWater(id);
+        // Recarregar o histórico para atualizar metas e logs
+        await loadHistory(period: currentState.selectedPeriod);
+      } catch (e) {
+        emit(HistoryError('Erro ao excluir: $e'));
+      }
+    }
+  }
 }
+
