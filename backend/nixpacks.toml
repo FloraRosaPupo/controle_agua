@@ -1,10 +1,16 @@
-# Contexto = pasta backend/ (Root Directory no Railway).
+# Root Directory = backend — só isto entra na imagem.
+# providers = ["node"] sozinho não estava aplicando setup no Railway; nixPkgs força o nix-env.
 providers = ["node"]
 
+[phases.setup]
+nixPkgs = ["nodejs", "npm"]
+
 [phases.install]
+dependsOn = ["setup"]
 cmds = ["npm ci"]
 
 [phases.build]
+dependsOn = ["install"]
 cmds = ["npm run build"]
 
 [start]
