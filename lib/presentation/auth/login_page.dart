@@ -180,16 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                                   }
                                 },
                           child: state is LoginLoading
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  ],
-                                )
+                              ? const Text("Carregando...")
                               : const Text(
                                   "Entrar",
                                   style: TextStyle(

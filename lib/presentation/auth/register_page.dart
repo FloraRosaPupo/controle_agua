@@ -327,18 +327,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           shadowColor: colors.primary.withValues(alpha: 0.4),
                         ),
                         child: state is RegisterLoading
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                
-                                  
-                                ],
-                              )
+                            ? const Text("Carregando...")
                             : const Text(
                                 "Criar Conta",
                                 style: TextStyle(
