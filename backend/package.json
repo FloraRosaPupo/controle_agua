@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev src/server.ts",
-    "build": "npx prisma generate && npx tsc",
+    "build": "node scripts/build.cjs",
     "start": "npx prisma migrate deploy && node dist/server.js"
 
   },

@@ -20,6 +20,7 @@ async function getSettings(req, res) {
                 name: true,
                 email: true,
                 dailyGoal: true,
+                quickAddAmount: true,
                 theme: true,
                 dailyReminder: true,
                 vibration: true,
@@ -53,13 +54,14 @@ async function updateSettings(req, res) {
             return res.status(401).json({ error: "Usuário não autenticado" });
         }
         // Pega do body os campos que o app enviar (todos são opcionais para o update)
-        const { name, dailyGoal, theme, dailyReminder, vibration, notifications } = req.body;
+        const { name, dailyGoal, quickAddAmount, theme, dailyReminder, vibration, notifications } = req.body;
         // Update user fields (without notificationSettings - handled separately)
         const updatedUser = await prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 name: name !== undefined ? String(name) : undefined,
                 dailyGoal: dailyGoal !== undefined ? Number(dailyGoal) : undefined,
+                quickAddAmount: quickAddAmount !== undefined ? Number(quickAddAmount) : undefined,
                 theme: theme !== undefined ? String(theme) : undefined,
                 dailyReminder: dailyReminder !== undefined ? Boolean(dailyReminder) : undefined,
                 vibration: vibration !== undefined ? Boolean(vibration) : undefined,
@@ -68,6 +70,7 @@ async function updateSettings(req, res) {
                 name: true,
                 email: true,
                 dailyGoal: true,
+                quickAddAmount: true,
                 theme: true,
                 dailyReminder: true,
                 vibration: true,
@@ -123,21 +126,26 @@ async function changePassword(req, res) {
             return res.status(401).json({ error: "Usuário não autenticado" });
         }
         const { currentPassword, newPassword } = req.body;
-        if (!currentPassword || !newPassword) {
+        // Garantir que recebemos strings e remover espaços extras acidentais
+        const curPass = currentPassword ? String(currentPassword).trim() : "";
+        const newPass = newPassword ? String(newPassword).trim() : "";
+        if (!curPass || !newPass) {
             return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
         }
-        if (String(newPassword).length < 6) {
+        if (newPass.length < 6) {
             return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
         }
         const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: "Usuário não encontrado" });
         }
-        const valid = await bcrypt_1.default.compare(currentPassword, user.password);
+        // Comparação com bcrypt
+        const valid = await bcrypt_1.default.compare(curPass, user.password);
         if (!valid) {
             return res.status(400).json({ error: "Senha atual incorreta" });
         }
-        const hash = await bcrypt_1.default.hash(String(newPassword), 10);
+        // Gerar novo hash e salvar
+        const hash = await bcrypt_1.default.hash(newPass, 10);
         await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { password: hash },

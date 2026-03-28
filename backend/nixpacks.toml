@@ -12,13 +12,11 @@ nixPkgs = ["nodejs"]
 dependsOn = ["setup"]
 cmds = ["NPM_CONFIG_PRODUCTION=false npm ci"]
 
-# Build da imagem não recebe as env do runtime; Prisma exige DATABASE_URL no schema.
+# Lógica de build (Prisma + DATABASE_URL + tsc) está em scripts/build.cjs para o caso do
+# Railway gerar só `npm run build` e ignorar cmds extras do Nixpacks.
 [phases.build]
 dependsOn = ["install"]
-cmds = [
-  "sh -c 'export DATABASE_URL=\"${DATABASE_URL:-postgresql://127.0.0.1:5432/prisma_build?schema=public}\"; npm run build'",
-  "npm prune --omit=dev",
-]
+cmds = ["npm run build", "npm prune --omit=dev"]
 
 [start]
 cmd = "npm start"

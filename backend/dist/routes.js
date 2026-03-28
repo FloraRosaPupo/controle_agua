@@ -28,6 +28,7 @@ router.post("/login", auth_1.login);
 router.post("/water", authMiddleware, water_1.addWater);
 router.get("/water/history", authMiddleware, water_1.history);
 router.get("/water/today", authMiddleware, water_1.today);
+router.delete("/water/:id", authMiddleware, water_1.deleteWater);
 router.get("/settings", authMiddleware, settings_1.getSettings);
 router.put("/settings", authMiddleware, settings_1.updateSettings);
 router.put("/settings/password", authMiddleware, settings_1.changePassword);
