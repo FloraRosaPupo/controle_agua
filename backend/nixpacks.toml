@@ -6,13 +6,15 @@ providers = ["node"]
 # npm vem junto com nodejs no nixpkgs; o atributo "npm" sozinho não existe nesse pin.
 nixPkgs = ["nodejs"]
 
+# Railway costuma definir NODE_ENV=production; npm ci aí NÃO instala devDependencies
+# (TypeScript some → `tsc` → exit 127).
 [phases.install]
 dependsOn = ["setup"]
-cmds = ["npm ci"]
+cmds = ["NPM_CONFIG_PRODUCTION=false npm ci"]
 
 [phases.build]
 dependsOn = ["install"]
-cmds = ["npm run build"]
+cmds = ["npm run build", "npm prune --omit=dev"]
 
 [start]
 cmd = "npm start"
