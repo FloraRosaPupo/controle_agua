@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 
 class ApiClient {
-  static const String baseUrl = 'https://controle-agua.onrender.com';
+  static const String baseUrl = 'https://controleagua-production.up.railway.app';
+
 
   final Dio dio;
 
