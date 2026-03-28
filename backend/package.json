@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev src/server.ts",
     "build": "node scripts/build.cjs",
-    "start": "npx prisma migrate deploy && node dist/server.js"
+    "start": "node node_modules/prisma/build/index.js migrate deploy && node dist/server.js"
 
   },
   "keywords": [],
