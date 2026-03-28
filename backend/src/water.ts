@@ -22,8 +22,8 @@ export async function addWater(req: AuthRequest, res: Response) {
     const { amount } = req.body
     const userId = req.userId
 
-    if (typeof amount !== 'number' || amount === 0) {
-        return res.status(400).json({ error: "Quantidade inválida" })
+    if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: "Quantidade deve ser maior que zero" })
     }
 
 
