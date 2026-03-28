@@ -3,7 +3,8 @@
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs", "npm"]
+# npm vem junto com nodejs no nixpkgs; o atributo "npm" sozinho não existe nesse pin.
+nixPkgs = ["nodejs"]
 
 [phases.install]
 dependsOn = ["setup"]
