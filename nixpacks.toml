@@ -1,0 +1,12 @@
+# Monorepo: Node só existe em backend/. Sem isso o Nixpacks pode gerar
+# `npm run build` sem instalar Node ou sem package.json na raiz do contexto.
+providers = ["node"]
+
+[phases.install]
+cmds = ["cd backend && npm ci"]
+
+[phases.build]
+cmds = ["cd backend && npm run build"]
+
+[start]
+cmd = "cd backend && npm start"
