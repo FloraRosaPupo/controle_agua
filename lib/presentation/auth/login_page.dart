@@ -186,17 +186,7 @@ class _LoginPageState extends State<LoginPage> {
                                   children: [
                                     const CircularProgressIndicator(
                                       color: Colors.white,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _loadingSeconds == 0
-                                          ? 'Carregando'
-                                          : 'Carregando',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                      strokeWidth: 2,
                                     ),
                                   ],
                                 )

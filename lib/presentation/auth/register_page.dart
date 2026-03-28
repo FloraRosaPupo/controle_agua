@@ -333,18 +333,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 children: [
                                   const CircularProgressIndicator(
                                     color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _loadingSeconds == 0
-                                        ? 'Carregando'
-                                        : 'Carregando',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.white,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                
+                                  
                                 ],
                               )
                             : const Text(
