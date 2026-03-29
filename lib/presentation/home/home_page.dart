@@ -13,7 +13,6 @@ import 'cubit/history_cubit.dart';
 import 'cubit/settings_cubit.dart';
 import 'cubit/notification_cubit.dart';
 
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -48,7 +47,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Bem Vindo(a) ${name.toUpperCase()}",
+              "Bem Vindo(a) ${name.isNotEmpty ? name[0].toUpperCase() + name.substring(1).toLowerCase() : ''}",
               style: theme.textTheme.bodySmall?.copyWith(
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.bold,
@@ -768,10 +767,7 @@ class _AnimatedPageView extends StatelessWidget {
   final PageController controller;
   final List<Widget> children;
 
-  const _AnimatedPageView({
-    required this.controller,
-    required this.children,
-  });
+  const _AnimatedPageView({required this.controller, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -785,7 +781,7 @@ class _AnimatedPageView extends StatelessWidget {
           builder: (context, child) {
             double value = 1.0;
             double slideValue = 0.0;
-            
+
             if (controller.position.haveDimensions) {
               final page = controller.page ?? controller.initialPage.toDouble();
               final difference = (index - page).abs();
