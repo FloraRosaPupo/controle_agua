@@ -59,7 +59,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <View
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_weight="1" />
@@ -78,7 +78,7 @@
                 android:src="@android:drawable/ic_input_add" />
         </FrameLayout>
 
-        <View
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_weight="1" />
