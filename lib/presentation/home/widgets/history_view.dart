@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'water_lottie.dart';
 import '../cubit/history_cubit.dart';
 import '../cubit/history_state.dart';
 
@@ -15,7 +16,7 @@ class HistoryView extends StatelessWidget {
     return BlocBuilder<HistoryCubit, HistoryState>(
       builder: (context, state) {
         if (state is HistoryInitial || state is HistoryLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: WaterLottie(size: 120));
         }
 
         if (state is HistoryError) {

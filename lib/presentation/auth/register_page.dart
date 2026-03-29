@@ -105,7 +105,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        "bebeu",
+                        "Bebeu",
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 24,
@@ -144,7 +144,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     decoration: InputDecoration(
                       hintText: "Seu nome",
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: colors.onSurface.withValues(alpha: 0.45),
                       ),
                       prefixIcon: Icon(
                         Icons.person_outline,
@@ -165,7 +165,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     decoration: InputDecoration(
                       hintText: "seu@email.com",
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: colors.onSurface.withValues(alpha: 0.45),
                       ),
                       prefixIcon: Icon(
                         Icons.alternate_email,
@@ -186,7 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     decoration: InputDecoration(
                       hintText: "••••••••",
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: colors.onSurface.withValues(alpha: 0.45),
                       ),
                       prefixIcon: Icon(
                         Icons.lock_outline,

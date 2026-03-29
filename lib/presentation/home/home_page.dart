@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import './widgets/settings_view.dart';
 import './widgets/add_water_button.dart';
 import './widgets/history_view.dart';
+import './widgets/water_lottie.dart';
 import './widgets/alerts_view.dart';
 import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
@@ -83,7 +84,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
               ),
             ),
-            // Circular Progress Indicator
+            // Anel de progresso (meta de ingestão)
             SizedBox(
               width: 240,
               height: 240,
@@ -361,7 +362,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
         if (state is HomeInitial || state is HomeLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: WaterLottie(size: 120));
         } else if (state is HomeError) {
           return Center(child: Text(state.message));
         } else if (state is HomeLoaded) {

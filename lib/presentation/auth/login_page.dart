@@ -95,7 +95,7 @@ class _LoginPageState extends State<LoginPage> {
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
-                        Text("bebeu", style: theme.textTheme.headlineLarge),
+                        Text("Bebeu", style: theme.textTheme.headlineLarge),
                         const SizedBox(height: 8),
                         Text(
                           "Mantenha-se hidratado todos os dias.",
@@ -129,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: InputDecoration(
                       hintText: "seu@email.com",
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: colors.onSurface.withValues(alpha: 0.45),
                       ),
                     ),
                   ),
@@ -153,7 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: InputDecoration(
                       hintText: "••••••••",
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: colors.onSurface.withValues(alpha: 0.45),
                       ),
                       suffixIcon: IconButton(
                         onPressed: () {

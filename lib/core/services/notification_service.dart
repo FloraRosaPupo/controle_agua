@@ -659,7 +659,9 @@ class NotificationService {
         statusText: 'Parabéns! Você completou sua meta de ${goal}ml',
         ongoing: false,
       );
-    } else if (percent >= 80 && !_notifiedMilestones.contains(80)) {
+    } else if (percent >= 80 &&
+        percent < 100 &&
+        !_notifiedMilestones.contains(80)) {
       _notifiedMilestones.add(80);
       _startProgressReminder();
       showProgressNotification(
@@ -671,7 +673,9 @@ class NotificationService {
         statusText: 'Continue assim',
         ongoing: false,
       );
-    } else if (percent >= 70 && !_notifiedMilestones.contains(70)) {
+    } else if (percent >= 70 &&
+        percent < 80 &&
+        !_notifiedMilestones.contains(70)) {
       _notifiedMilestones.add(70);
       _startProgressReminder();
       showProgressNotification(
@@ -702,9 +706,11 @@ class NotificationService {
   void _reshowProgressNotification() {
     if (_lastCurrent == null || _lastGoal == null || _lastUserName == null)
       return;
+    if (_lastCurrent! >= _lastGoal!) return;
     if (_notifiedMilestones.contains(100)) return;
 
     final percent = ((_lastCurrent! / _lastGoal!) * 100).toInt();
+    if (percent >= 100) return;
     if (percent < 70) return;
 
     final String title;
