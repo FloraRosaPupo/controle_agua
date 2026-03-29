@@ -52,25 +52,10 @@ class HistoryView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Progresso Semanal",
+          "Progresso",
           style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              Text(
-                state.selectedPeriod == '7d' ? "ÚLTIMOS 7 DIAS" : "ÚLTIMOS 30 DIAS",
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-              const Icon(Icons.keyboard_arrow_down, size: 16),
-            ],
-          ),
-        ),
+       
       ],
     );
   }
