@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../data/services/auth_service.dart';
 import '../cubit/settings_cubit.dart';
 import 'change_password_dialog.dart';
+import 'water_lottie.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -386,7 +387,7 @@ class SettingsView extends StatelessWidget {
     return BlocBuilder<SettingsCubit, SettingsState>(
       builder: (context, state) {
         if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: WaterLottie(size: 120));
         }
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),

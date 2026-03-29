@@ -11,6 +11,8 @@ import 'cubit/home_cubit.dart';
 import 'cubit/home_state.dart';
 import 'cubit/history_cubit.dart';
 import 'cubit/settings_cubit.dart';
+import 'cubit/notification_cubit.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,8 +29,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
-    // Inicia carrengando do backend!
+    // Carrega dados iniciais do backend e sincroniza alertas/configurações
     context.read<HomeCubit>().loadTodayData();
+    context.read<NotificationCubit>().loadPreferences();
+    context.read<SettingsCubit>().loadSettings();
   }
 
   @override

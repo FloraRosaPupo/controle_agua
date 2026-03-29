@@ -47,15 +47,22 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ThemeData theme, ColorScheme colors, HistoryLoaded state) {
+  Widget _buildHeader(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colors,
+    HistoryLoaded state,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Progresso",
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          "Progresso Semanal",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-       
+        _buildWeekRange(theme, colors),
       ],
     );
   }
@@ -86,7 +93,13 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(ThemeData theme, ColorScheme colors, String label, String value, String unit) {
+  Widget _buildStatCard(
+    ThemeData theme,
+    ColorScheme colors,
+    String label,
+    String value,
+    String unit,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -112,12 +125,18 @@ class HistoryView extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: colors.onSurface),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: colors.onSurface,
+                ),
               ),
               const SizedBox(width: 4),
               Text(
                 unit,
-                style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.4), fontWeight: FontWeight.bold),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.4),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -126,34 +145,58 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildChartSection(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
+  Widget _buildChartSection(
+    ThemeData theme,
+    ColorScheme colors,
+    HistoryLoaded state,
+  ) {
     // Agrupar logs por dia para o gráfico
     final Map<String, int> dailySums = {};
     final now = DateTime.now();
     for (int i = 6; i >= 0; i--) {
-        final date = now.subtract(Duration(days: i));
-        final key = DateFormat('yyyy-MM-dd').format(date);
-        dailySums[key] = 0;
+      final date = now.subtract(Duration(days: i));
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      dailySums[key] = 0;
     }
 
     for (var log in state.logs) {
-        final dateStr = (log['date'] as String).split('T')[0];
-        if (dailySums.containsKey(dateStr)) {
-            dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
-        }
+      final dateStr = (log['date'] as String).split('T')[0];
+      if (dailySums.containsKey(dateStr)) {
+        dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
+      }
     }
 
-    final List<String> weekDays = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
-    
+    final List<String> weekDays = [
+      "SEG",
+      "TER",
+      "QUA",
+      "QUI",
+      "SEX",
+      "SÁB",
+      "DOM",
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-           children: [
-              Text("Volume de Hidratação", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              Text("Meta: ${state.dailyGoal}ml", style: TextStyle(color: colors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
-           ],
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Volume de Hidratação",
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              "Meta: ${state.dailyGoal}ml",
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Container(
@@ -162,7 +205,10 @@ class HistoryView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: dailySums.entries.map((entry) {
-              final double progress = (entry.value / state.dailyGoal).clamp(0.0, 1.2);
+              final double progress = (entry.value / state.dailyGoal).clamp(
+                0.0,
+                1.2,
+              );
               final dayIndex = DateTime.parse(entry.key).weekday - 1;
               return Column(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -174,20 +220,36 @@ class HistoryView extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
-                        colors: progress >= 1.0 
-                          ? [colors.primary, colors.primary.withValues(alpha: 0.6)]
-                          : [colors.onSurface.withValues(alpha: 0.1), colors.onSurface.withValues(alpha: 0.2)],
+                        colors: progress >= 1.0
+                            ? [
+                                colors.primary,
+                                colors.primary.withValues(alpha: 0.6),
+                              ]
+                            : [
+                                colors.onSurface.withValues(alpha: 0.1),
+                                colors.onSurface.withValues(alpha: 0.2),
+                              ],
                       ),
                       borderRadius: BorderRadius.circular(8),
-                      boxShadow: progress >= 1.0 ? [
-                        BoxShadow(color: colors.primary.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 1)
-                      ] : null,
+                      boxShadow: progress >= 1.0
+                          ? [
+                              BoxShadow(
+                                color: colors.primary.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     weekDays[dayIndex % 7],
-                    style: TextStyle(fontSize: 10, color: colors.onSurface.withValues(alpha: 0.4), fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: colors.onSurface.withValues(alpha: 0.4),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               );
@@ -198,7 +260,12 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyLogs(BuildContext context, ThemeData theme, ColorScheme colors, HistoryLoaded state) {
+  Widget _buildDailyLogs(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colors,
+    HistoryLoaded state,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,18 +294,16 @@ class HistoryView extends StatelessWidget {
         ...state.logs.map((log) {
           // Removemos o 'Z' para tratar a data vinda do banco como "já local",
           // preservando o deslocamento que aplicamos na inserção.
-          final date = DateTime.parse(log['date'].toString().replaceAll('Z', ''));
-          return _buildHistoryItem(
-            context,
-            theme,
-            colors,
-            {
-              "id": log['id'],
-              "type": "Água",
-              "time": "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
-              "amount": log['amount'],
-            },
+          final date = DateTime.parse(
+            log['date'].toString().replaceAll('Z', ''),
           );
+          return _buildHistoryItem(context, theme, colors, {
+            "id": log['id'],
+            "type": "Água",
+            "time":
+                "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
+            "amount": log['amount'],
+          });
         }),
       ],
     );
@@ -321,10 +386,36 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-
   String _getShortDayName(DateTime date) {
     const names = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
     return names[date.weekday - 1];
   }
 
+  Widget _buildWeekRange(ThemeData theme, ColorScheme colors) {
+    final now = DateTime.now();
+    // Calcula domingo anterior (ou hoje se for domingo)
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+    final saturday = sunday.add(const Duration(days: 6));
+
+    final startStr =
+        "${_getShortDayName(sunday)} ${sunday.day.toString().padLeft(2, '0')}/${sunday.month.toString().padLeft(2, '0')}";
+    final endStr =
+        "${_getShortDayName(saturday)} ${saturday.day.toString().padLeft(2, '0')}/${saturday.month.toString().padLeft(2, '0')}";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        "$startStr - $endStr",
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: colors.onSurface.withValues(alpha: 0.6),
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
 }

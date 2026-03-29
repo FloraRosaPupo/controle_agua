@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/notification_cubit.dart';
 import '../../../../core/models/notification_preferences.dart';
+import 'water_lottie.dart';
 
 class AlertsView extends StatefulWidget {
   const AlertsView({super.key});
@@ -14,11 +15,8 @@ class _AlertsViewState extends State<AlertsView> {
   @override
   void initState() {
     super.initState();
-    // Só carrega se ainda não tem dados
-    final state = context.read<NotificationCubit>().state;
-    if (state is! NotificationLoaded) {
-      context.read<NotificationCubit>().loadPreferences();
-    }
+    // Sempre carrega do servidor para garantir sincronia (notificações agendadas no fuso correto)
+    context.read<NotificationCubit>().loadPreferences();
   }
 
   void _updatePrefs(NotificationPreferences prefs) {
@@ -51,7 +49,7 @@ class _AlertsViewState extends State<AlertsView> {
             child: BlocBuilder<NotificationCubit, NotificationState>(
               builder: (context, state) {
                 if (state is NotificationLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: WaterLottie(size: 120));
                 } else if (state is NotificationError) {
                   return Center(
                     child: Padding(
