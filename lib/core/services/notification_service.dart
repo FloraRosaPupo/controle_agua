@@ -139,7 +139,7 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    if (kIsWeb) return; // Não disponível no Web
+    if (kIsWeb) return;
 
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -159,6 +159,55 @@ class NotificationService {
       id: id,
       title: title,
       body: body,
+      notificationDetails: details,
+    );
+  }
+
+  Future<void> showProgressNotification({
+    required int id,
+    required String title,
+    required int currentMl,
+    required int goalMl,
+    required int percent,
+    required String statusText,
+    bool ongoing = false,
+  }) async {
+    if (kIsWeb) return;
+
+    final remaining = goalMl - currentMl;
+    final clampedPercent = percent.clamp(0, 100);
+
+    final String bodyText;
+    if (remaining > 0) {
+      bodyText = '$statusText • Faltam ${remaining}ml';
+    } else {
+      bodyText = statusText;
+    }
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        _androidChannelNowId(),
+        'Progresso de Hidratação',
+        channelDescription: 'Acompanhe seu progresso de hidratação',
+        importance: Importance.max,
+        priority: Priority.high,
+        visibility: NotificationVisibility.public,
+        showWhen: true,
+        enableVibration: _vibrationEnabled,
+        subText: '$clampedPercent%',
+        showProgress: true,
+        maxProgress: 100,
+        progress: clampedPercent,
+        ongoing: ongoing,
+        autoCancel: !ongoing,
+      ),
+      iOS: DarwinNotificationDetails(subtitle: '$clampedPercent% da meta'),
+    );
+
+    await _notificationsPlugin.show(
+      id: id,
+      title: title,
+      body: bodyText,
       notificationDetails: details,
     );
   }
@@ -497,7 +546,8 @@ class NotificationService {
       for (final total in marks) {
         final hour = total ~/ 60;
         final minute = total % 60;
-        final message = _reminderMessages[messageIndex % _reminderMessages.length];
+        final message =
+            _reminderMessages[messageIndex % _reminderMessages.length];
         messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
@@ -539,7 +589,8 @@ class NotificationService {
       for (final s in slots) {
         final hour = s.totalMinutes ~/ 60;
         final minute = s.totalMinutes % 60;
-        final message = _reminderMessages[messageIndex % _reminderMessages.length];
+        final message =
+            _reminderMessages[messageIndex % _reminderMessages.length];
         messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
@@ -571,10 +622,16 @@ class NotificationService {
       }
     }
 
-
     _debugLogScheduleSummary(scheduledCount, prefs);
     _startDebugNearFireMonitoring();
   }
+
+  final Set<int> _notifiedMilestones = {};
+  Timer? _progressReminderTimer;
+
+  int? _lastCurrent;
+  int? _lastGoal;
+  String? _lastUserName;
 
   void checkProgressAndNotify({
     required int current,
@@ -583,21 +640,100 @@ class NotificationService {
   }) {
     if (goal <= 0) return;
 
-    final percent = (current / goal) * 100;
-    final remaining = goal - current;
+    final percent = ((current / goal) * 100).toInt();
 
-    if (current >= goal) {
-      showNotification(
+    _lastCurrent = current;
+    _lastGoal = goal;
+    _lastUserName = userName;
+
+    if (current >= goal && !_notifiedMilestones.contains(100)) {
+      _notifiedMilestones.add(100);
+      _stopProgressReminder();
+      _notificationsPlugin.cancel(id: 996);
+      showProgressNotification(
         id: 999,
-        title: 'Meta Atingida!',
-        body: 'Parabéns, $userName! Você atingiu sua meta diária de ${goal}ml!',
+        title: '🎉 Meta atingida, $userName!',
+        currentMl: current,
+        goalMl: goal,
+        percent: percent.clamp(0, 100),
+        statusText: 'Parabéns! Você completou sua meta de ${goal}ml',
+        ongoing: false,
       );
-    } else if (percent >= 80) {
-      showNotification(
-        id: 998,
-        title: 'Quase lá!',
-        body: 'Falta muito pouco! Apenas ${remaining}ml para atingir sua meta.',
+    } else if (percent >= 80 && !_notifiedMilestones.contains(80)) {
+      _notifiedMilestones.add(80);
+      _startProgressReminder();
+      showProgressNotification(
+        id: 996,
+        title: '💧 Quase lá, $userName!',
+        currentMl: current,
+        goalMl: goal,
+        percent: percent,
+        statusText: 'Continue assim',
+        ongoing: false,
+      );
+    } else if (percent >= 70 && !_notifiedMilestones.contains(70)) {
+      _notifiedMilestones.add(70);
+      _startProgressReminder();
+      showProgressNotification(
+        id: 996,
+        title: '👏 Bom progresso, $userName!',
+        currentMl: current,
+        goalMl: goal,
+        percent: percent,
+        statusText: 'Você está no caminho certo',
+        ongoing: false,
       );
     }
+  }
+
+  void _startProgressReminder() {
+    _stopProgressReminder();
+    _progressReminderTimer = Timer.periodic(
+      const Duration(minutes: 30),
+      (_) => _reshowProgressNotification(),
+    );
+  }
+
+  void _stopProgressReminder() {
+    _progressReminderTimer?.cancel();
+    _progressReminderTimer = null;
+  }
+
+  void _reshowProgressNotification() {
+    if (_lastCurrent == null || _lastGoal == null || _lastUserName == null)
+      return;
+    if (_notifiedMilestones.contains(100)) return;
+
+    final percent = ((_lastCurrent! / _lastGoal!) * 100).toInt();
+    if (percent < 70) return;
+
+    final String title;
+    final String statusText;
+
+    if (percent >= 80) {
+      title = '💧 Quase lá, $_lastUserName!';
+      statusText = 'Continue assim';
+    } else {
+      title = '👏 Bom progresso, $_lastUserName!';
+      statusText = 'Você está no caminho certo';
+    }
+
+    showProgressNotification(
+      id: 996,
+      title: title,
+      currentMl: _lastCurrent!,
+      goalMl: _lastGoal!,
+      percent: percent,
+      statusText: statusText,
+      ongoing: false,
+    );
+  }
+
+  void resetDailyMilestones() {
+    _notifiedMilestones.clear();
+    _stopProgressReminder();
+    _lastCurrent = null;
+    _lastGoal = null;
+    _lastUserName = null;
   }
 }

@@ -17,6 +17,7 @@ import 'data/services/auth_service.dart';
 import 'presentation/auth/login_page.dart';
 import 'presentation/auth/register_page.dart';
 import 'presentation/home/home_page.dart';
+import 'presentation/splash/splash_page.dart';
 import 'presentation/home/cubit/home_cubit.dart';
 import 'presentation/home/cubit/history_cubit.dart';
 import 'presentation/auth/cubit/login_cubit.dart';
@@ -45,8 +46,10 @@ class AppBlocObserver extends BlocObserver {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Ativa o observer para debugar estados
-  Bloc.observer = AppBlocObserver();
+  // Ativa o observer para debugar estados (apenas em debug)
+  if (kDebugMode) {
+    Bloc.observer = AppBlocObserver();
+  }
 
   await HomeWidget.registerInteractivityCallback(homeWidgetInteractiveCallback);
 
@@ -66,8 +69,12 @@ void main() async {
   final loggedIn = await authService.isLoggedIn();
 
   final router = GoRouter(
-    initialLocation: loggedIn ? '/home' : '/login',
+    initialLocation: '/splash',
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => SplashPage(isLoggedIn: loggedIn),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => BlocProvider(

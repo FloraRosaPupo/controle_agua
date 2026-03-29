@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/validators.dart';
 import '../../controllers/register_controller.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
   double _dailyGoal = 2500;
   final _controller = RegisterController();
+  final _formKey = GlobalKey<FormState>();
   Timer? _loadingTimer;
   int _loadingSeconds = 0;
 
@@ -86,9 +88,11 @@ class _RegisterPageState extends State<RegisterPage> {
             },
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   const SizedBox(height: 20),
 
                   // Top Bar: Logo + App Name
@@ -133,8 +137,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   // Form
                   _buildFieldLabel(context, "NOME COMPLETO"),
                   const SizedBox(height: 8),
-                  TextField(
+                  TextFormField(
                     controller: _controller.nameController,
+                    autofillHints: const [AutofillHints.name],
+                    validator: Validators.validateName,
                     decoration: InputDecoration(
                       hintText: "Seu nome",
                       hintStyle: TextStyle(
@@ -151,8 +157,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   _buildFieldLabel(context, "E-MAIL"),
                   const SizedBox(height: 8),
-                  TextField(
+                  TextFormField(
                     controller: _controller.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    validator: Validators.validateEmail,
                     decoration: InputDecoration(
                       hintText: "seu@email.com",
                       hintStyle: TextStyle(
@@ -169,9 +178,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   _buildFieldLabel(context, "SENHA"),
                   const SizedBox(height: 8),
-                  TextField(
+                  TextFormField(
                     controller: _controller.passwordController,
                     obscureText: !_isPasswordVisible,
+                    autofillHints: const [AutofillHints.newPassword],
+                    validator: Validators.validatePasswordStrength,
                     decoration: InputDecoration(
                       hintText: "••••••••",
                       hintStyle: TextStyle(
@@ -295,30 +306,15 @@ class _RegisterPageState extends State<RegisterPage> {
                         onPressed: state is RegisterLoading
                             ? null
                             : () {
-                                final name = _controller.nameController.text
-                                    .trim();
-                                final email = _controller.emailController.text
-                                    .trim();
-                                final pwd = _controller.passwordController.text;
-
-                                if (name.isNotEmpty &&
-                                    email.isNotEmpty &&
-                                    pwd.isNotEmpty) {
-                                  context
-                                      .read<RegisterCubit>()
-                                      .registerAndLogin(
-                                        name,
-                                        email,
-                                        pwd,
-                                        _dailyGoal,
-                                      );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Preencha todos os campos.",
-                                      ),
-                                    ),
+                                if (_formKey.currentState?.validate() ?? false) {
+                                  final name = _controller.nameController.text.trim();
+                                  final email = _controller.emailController.text.trim();
+                                  final pwd = _controller.passwordController.text;
+                                  context.read<RegisterCubit>().registerAndLogin(
+                                    name,
+                                    email,
+                                    pwd,
+                                    _dailyGoal,
                                   );
                                 }
                               },
@@ -386,7 +382,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
 
                   const SizedBox(height: 20),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

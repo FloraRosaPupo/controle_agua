@@ -18,14 +18,22 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
     // Inicia carrengando do backend!
     context.read<HomeCubit>().loadTodayData();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Widget _buildHeader(ThemeData theme, ColorScheme colors, String name) {
@@ -437,8 +445,8 @@ class _HomePageState extends State<HomePage> {
           ),
           body: SafeArea(
             bottom: false,
-            child: IndexedStack(
-              index: _selectedIndex,
+            child: _AnimatedPageView(
+              controller: _pageController,
               children: [
                 _buildHomeContent(theme, colors),
                 const HistoryView(),
@@ -461,11 +469,20 @@ class _HomePageState extends State<HomePage> {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _selectedIndex = index);
-        if (index == 0) {
-          context.read<HomeCubit>().refreshTodayData();
-        } else if (index == 1) {
-          context.read<HistoryCubit>().loadHistory();
+        if (_selectedIndex != index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+          );
+          if (index == 0) {
+            context.read<HomeCubit>().refreshTodayData();
+          } else if (index == 1) {
+            context.read<HistoryCubit>().loadHistory();
+          }
         }
       },
       child: Column(
@@ -738,6 +755,50 @@ class _SwipeToDeleteItemState extends State<_SwipeToDeleteItem> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedPageView extends StatelessWidget {
+  final PageController controller;
+  final List<Widget> children;
+
+  const _AnimatedPageView({
+    required this.controller,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      controller: controller,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: children.length,
+      itemBuilder: (context, index) {
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, child) {
+            double value = 1.0;
+            double slideValue = 0.0;
+            
+            if (controller.position.haveDimensions) {
+              final page = controller.page ?? controller.initialPage.toDouble();
+              final difference = (index - page).abs();
+              value = (1 - (difference * 0.3)).clamp(0.0, 1.0);
+              slideValue = (index - page) * 30;
+            }
+
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, slideValue.abs()),
+                child: child,
+              ),
+            );
+          },
+          child: children[index],
+        );
+      },
     );
   }
 }

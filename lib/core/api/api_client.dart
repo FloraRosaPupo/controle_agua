@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiClient {
   static const String baseUrl = 'https://controleagua-production.up.railway.app';
-
 
   final Dio dio;
 
@@ -18,7 +18,15 @@ class ApiClient {
           },
         ),
       ) {
-    dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
+    if (kDebugMode) {
+      dio.interceptors.add(
+        LogInterceptor(
+          responseBody: true,
+          requestBody: true,
+          logPrint: (obj) => debugPrint(obj.toString()),
+        ),
+      );
+    }
   }
 
   void setToken(String token) {

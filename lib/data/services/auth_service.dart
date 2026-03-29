@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/api/api_client.dart';
 
 class AuthService {
   final ApiClient _apiClient;
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+  static const _tokenKey = 'jwt_token';
 
   AuthService(this._apiClient);
 
@@ -17,15 +22,13 @@ class AuthService {
       if (response.statusCode == 200) {
         final token = response.data['token'];
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', token);
+        await _storage.write(key: _tokenKey, value: token);
 
         _apiClient.setToken(token);
       } else {
         throw Exception('Credenciais inválidas');
       }
     } on DioException catch (e) {
-      // Puxando o erro do express
       throw Exception(e.response?.data['error'] ?? 'Erro de conexão no login');
     }
   }
@@ -61,14 +64,12 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
+    await _storage.delete(key: _tokenKey);
     _apiClient.clearToken();
   }
 
   Future<bool> isLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final token = await _storage.read(key: _tokenKey);
     if (token != null && token.isNotEmpty) {
       _apiClient.setToken(token);
       return true;

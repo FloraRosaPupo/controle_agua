@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/validators.dart';
 import '../../controllers/login_controller.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _controller = LoginController();
+  final _formKey = GlobalKey<FormState>();
   Timer? _loadingTimer;
   int _loadingSeconds = 0;
 
@@ -76,9 +78,11 @@ class _LoginPageState extends State<LoginPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   const SizedBox(height: 40),
 
                   // Logo / Título
@@ -117,8 +121,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
 
-                  TextField(
+                  TextFormField(
                     controller: _controller.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    validator: Validators.validateEmail,
                     decoration: InputDecoration(
                       hintText: "seu@email.com",
                       hintStyle: TextStyle(
@@ -138,9 +145,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
 
-                  TextField(
+                  TextFormField(
                     controller: _controller.passwordController,
                     obscureText: !_controller.isPasswordVisible,
+                    autofillHints: const [AutofillHints.password],
+                    validator: Validators.validatePassword,
                     decoration: InputDecoration(
                       hintText: "••••••••",
                       hintStyle: TextStyle(
@@ -174,15 +183,10 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: state is LoginLoading
                               ? null
                               : () {
-                                  final email = _controller.emailController.text
-                                      .trim();
-                                  final pwd =
-                                      _controller.passwordController.text;
-                                  if (email.isNotEmpty && pwd.isNotEmpty) {
-                                    context.read<LoginCubit>().login(
-                                      email,
-                                      pwd,
-                                    );
+                                  if (_formKey.currentState?.validate() ?? false) {
+                                    final email = _controller.emailController.text.trim();
+                                    final pwd = _controller.passwordController.text;
+                                    context.read<LoginCubit>().login(email, pwd);
                                   }
                                 },
                           child: state is LoginLoading
@@ -209,7 +213,8 @@ class _LoginPageState extends State<LoginPage> {
                   ),
 
                   const SizedBox(height: 20),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
