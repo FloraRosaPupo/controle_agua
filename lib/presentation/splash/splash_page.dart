@@ -63,77 +63,52 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF020617) : Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 200,
-              height: 200,
-              child: DotLottieLoader.fromAsset(
-                'assets/animations/splash_water.lottie',
-                frameBuilder: (context, dotLottie) {
-                  if (dotLottie == null) {
+        child: SizedBox(
+          width: 200,
+          height: 200,
+          child: DotLottieLoader.fromAsset(
+            'assets/animations/splash_water.lottie',
+            frameBuilder: (context, dotLottie) {
+              if (dotLottie == null) {
+                return const CircularProgressIndicator(
+                  color: Color(0xFF0EA5E9),
+                );
+              }
+              final animations = dotLottie.animations;
+              if (animations.isEmpty) {
+                return _fallbackIcon(isDark);
+              }
+              final jsonBytes = animations.length == 1
+                  ? animations.values.single
+                  : animations.values.first;
+
+              return Lottie.memory(
+                jsonBytes,
+                controller: _controller,
+                onLoaded: _onAnimationLoaded,
+                imageProviderFactory: dotLottie.images.isNotEmpty
+                    ? (asset) {
+                        final bytes = dotLottie.images[asset.fileName];
+                        return bytes != null ? MemoryImage(bytes) : null;
+                      }
+                    : null,
+                errorBuilder: (context, error, stackTrace) {
+                  return _fallbackIcon(isDark);
+                },
+                frameBuilder: (context, child, composition) {
+                  if (composition == null) {
                     return const CircularProgressIndicator(
                       color: Color(0xFF0EA5E9),
                     );
                   }
-                  final animations = dotLottie.animations;
-                  if (animations.isEmpty) {
-                    return _fallbackIcon(isDark);
-                  }
-                  final jsonBytes = animations.length == 1
-                      ? animations.values.single
-                      : animations.values.first;
-
-                  return Lottie.memory(
-                    jsonBytes,
-                    controller: _controller,
-                    onLoaded: _onAnimationLoaded,
-                    imageProviderFactory: dotLottie.images.isNotEmpty
-                        ? (asset) {
-                            final bytes = dotLottie.images[asset.fileName];
-                            return bytes != null ? MemoryImage(bytes) : null;
-                          }
-                        : null,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _fallbackIcon(isDark);
-                    },
-                    frameBuilder: (context, child, composition) {
-                      if (composition == null) {
-                        return const CircularProgressIndicator(
-                          color: Color(0xFF0EA5E9),
-                        );
-                      }
-                      return child;
-                    },
-                  );
+                  return child;
                 },
-                errorBuilder: (context, error, stackTrace) {
-                  return _fallbackIcon(isDark);
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Bebeu',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF1F2937),
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Mantenha-se hidratado',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.6)
-                    : const Color(0xFF6B7280),
-              ),
-            ),
-          ],
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return _fallbackIcon(isDark);
+            },
+          ),
         ),
       ),
     );
