@@ -5,6 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api/api_client.dart';
 import 'services/widget_service.dart';
 import '../data/services/water_service.dart';
+import '../data/services/settings_service.dart';
+import 'services/notification_service.dart';
 
 const _storage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -25,9 +27,21 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
   final client = ApiClient();
   client.setToken(token);
   final water = WaterService(client);
+  final settingsService = SettingsService(client);
 
   try {
-    await water.addWater(WidgetService.widgetQuickAddMl);
+    final settingsInfo = await settingsService.getSettings();
+    final quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ?? 200;
+
+    await water.addWater(quickAddAmount);
+
+    await NotificationService().initialize();
+    await NotificationService().showNotification(
+      id: 8888,
+      title: 'Bebeu?',
+      body: '+ $quickAddAmount ml adicionados',
+    );
+
     final data = await water.getTodayData();
     if (data != null) {
       final progress = data.dailyGoal == 0
