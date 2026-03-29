@@ -22,7 +22,7 @@ class HomeCubit extends Cubit<HomeState> {
             "id": log.id,
             "type": "Água",
             "amount": log.amount,
-            "time": log.date.toLocal().toString().substring(11, 16),
+            "time": log.date.toString().substring(11, 16),
           },
         )
         .toList();

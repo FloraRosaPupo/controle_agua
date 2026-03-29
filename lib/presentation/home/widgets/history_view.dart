@@ -240,7 +240,9 @@ class HistoryView extends StatelessWidget {
             ),
           ),
         ...state.logs.map((log) {
-          final date = DateTime.parse(log['date']);
+          // Removemos o 'Z' para tratar a data vinda do banco como "já local",
+          // preservando o deslocamento que aplicamos na inserção.
+          final date = DateTime.parse(log['date'].toString().replaceAll('Z', ''));
           return _buildHistoryItem(
             context,
             theme,

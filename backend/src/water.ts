@@ -4,18 +4,16 @@ import { AuthRequest } from "./types"
 
 function getStartOfUserDayInUTC(req: AuthRequest): Date {
     const offsetHeader = req.header('x-timezone-offset')
-    // offset in minutes from client, e.g. -180 for Brazil
     const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
 
     const now = new Date()
-    // adjust now to user's local "day" (User clock = UTC + offset)
+    // Convert to user's local time (as a fake UTC Date)
     const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000))
 
-    // reset to midnight in that offset's "world"
+    // Reset to midnight in that "local" clock
     userLocalNow.setUTCHours(0, 0, 0, 0)
 
-    // convert back to UTC for DB query
-    return new Date(userLocalNow.getTime() - (offsetMinutes * 60 * 1000))
+    return userLocalNow
 }
 
 export async function addWater(req: AuthRequest, res: Response) {
@@ -26,12 +24,16 @@ export async function addWater(req: AuthRequest, res: Response) {
         return res.status(400).json({ error: "Quantidade deve ser maior que zero" })
     }
 
+    const offsetHeader = req.header('x-timezone-offset')
+    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+    // Shifting the date by the offset so it is stored as "Local Time" in the DB
+    const adjustedDate = new Date(Date.now() + (offsetMinutes * 60 * 1000))
 
     try {
         await prisma.waterLog.create({
             data: {
                 amount,
-                date: new Date(),
+                date: adjustedDate,
                 userId: userId!
             }
         })
