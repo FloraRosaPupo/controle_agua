@@ -47,7 +47,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Bem Vindo(a) ${name.isNotEmpty ? name[0].toUpperCase() + name.substring(1).toLowerCase() : ''}",
+              "Bem Vindo(a) ${() {
+                final trimmed = name.trim();
+                if (trimmed.isEmpty) return '';
+                final first = trimmed.split(' ').first;
+                return first[0].toUpperCase() + first.substring(1).toLowerCase();
+              }()}",
               style: theme.textTheme.bodySmall?.copyWith(
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.bold,

@@ -4,13 +4,15 @@ import { AuthRequest } from "./types"
 
 function getStartOfUserDayInUTC(req: AuthRequest): Date {
     const offsetHeader = req.header('x-timezone-offset')
+    // Se o header for -180 (Brasil), offsetMinutes será -180
     const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
 
     const now = new Date()
-    // Convert to user's local time (as a fake UTC Date)
+    // Convert to user's local time numbers but still as a UTC Date object
+    // Ex: UTC 22:00 + (-180 min) = 19:00 UTC
     const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000))
 
-    // Reset to midnight in that "local" clock
+    // Zera para meia-noite nesse "relógio local"
     userLocalNow.setUTCHours(0, 0, 0, 0)
 
     return userLocalNow
@@ -26,7 +28,10 @@ export async function addWater(req: AuthRequest, res: Response) {
 
     const offsetHeader = req.header('x-timezone-offset')
     const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
-    // Shifting the date by the offset so it is stored as "Local Time" in the DB
+    
+    // Se o banco tá 3h na frente (UTC) e o usuário quer a hora atual local (UTC-3),
+    // subtraímos 3h (180 min) antes de salvar.
+    // Date.now() é UTC. Se offsetMinutes for -180, isso subtrai 3 horas.
     const adjustedDate = new Date(Date.now() + (offsetMinutes * 60 * 1000))
 
     try {
@@ -51,17 +56,13 @@ export async function history(req: AuthRequest, res: Response) {
     const { period, date } = req.query
 
     if (date) {
+        // Date is like '2026-03-27'
         startDate = new Date(date as string)
         startDate.setUTCHours(0, 0, 0, 0)
-        // If the date is passed, we should ideally still apply the offset, but since it's a fixed date string (e.g. 2026-03-27),
-        // we'll treat it as midnight UTC + offset.
-        const offsetHeader = req.header('x-timezone-offset')
-        const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
-        startDate = new Date(startDate.getTime() - (offsetMinutes * 60 * 1000))
 
         endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
     } else {
-        const days = period === '30d' ? 30 : 7
+        const days = 7
         startDate = getStartOfUserDayInUTC(req)
         startDate.setDate(startDate.getDate() - days)
         endDate = new Date()
@@ -90,19 +91,20 @@ export async function history(req: AuthRequest, res: Response) {
     const dailyGoal = user.dailyGoal
 
     // Cálculo de estatísticas (ajustado para timezone)
-    const offsetHeader = req.header('x-timezone-offset')
-    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+    // Se já ajustamos na inserção, os logs estão em "hora local".
+    // Mas startDate/endDate podem estar desalinhados se não tomarmos cuidado.
 
     const logsByDay: { [key: string]: number } = {}
     logs.forEach(log => {
-        const localDate = new Date(log.date.getTime() + (offsetMinutes * 60 * 1000))
-        const day = localDate.toISOString().split('T')[0]
+        // Se a data já foi salva com o offset (no addWater), não precisamos adicionar de novo.
+        // O log.date já representa a hora local do usuário.
+        const day = log.date.toISOString().split('T')[0]
         logsByDay[day] = (logsByDay[day] || 0) + log.amount
     })
 
     const daysCount = Object.keys(logsByDay).length || 1
     const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
-    const average = Math.round(totalIntake / (period === '30d' ? 30 : 7))
+    const average = Math.round(totalIntake / 7)
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
     res.json({
@@ -111,7 +113,7 @@ export async function history(req: AuthRequest, res: Response) {
         stats: {
             average,
             goalsMet,
-            totalDays: period === '30d' ? 30 : 7
+            totalDays: 7
         }
     })
 }
