@@ -26,19 +26,11 @@ export async function addWater(req: AuthRequest, res: Response) {
         return res.status(400).json({ error: "Quantidade deve ser maior que zero" })
     }
 
-    const offsetHeader = req.header('x-timezone-offset')
-    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
-    
-    // Se o banco tá 3h na frente (UTC) e o usuário quer a hora atual local (UTC-3),
-    // subtraímos 3h (180 min) antes de salvar.
-    // Date.now() é UTC. Se offsetMinutes for -180, isso subtrai 3 horas.
-    const adjustedDate = new Date(Date.now() + (offsetMinutes * 60 * 1000))
-
     try {
         await prisma.waterLog.create({
             data: {
                 amount,
-                date: adjustedDate,
+                date: new Date(),  // Sempre salva em UTC puro
                 userId: userId!
             }
         })

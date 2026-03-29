@@ -160,7 +160,8 @@ class HistoryView extends StatelessWidget {
     }
 
     for (var log in state.logs) {
-      final dateStr = (log['date'] as String).split('T')[0];
+      final localDate = DateTime.parse(log['date'].toString()).toLocal();
+      final dateStr = DateFormat('yyyy-MM-dd').format(localDate);
       if (dailySums.containsKey(dateStr)) {
         dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
       }
@@ -292,11 +293,7 @@ class HistoryView extends StatelessWidget {
             ),
           ),
         ...state.logs.map((log) {
-          // Removemos o 'Z' para tratar a data vinda do banco como "já local",
-          // preservando o deslocamento que aplicamos na inserção.
-          final date = DateTime.parse(
-            log['date'].toString().replaceAll('Z', ''),
-          );
+          final date = DateTime.parse(log['date'].toString()).toLocal();
           return _buildHistoryItem(context, theme, colors, {
             "id": log['id'],
             "type": "Água",

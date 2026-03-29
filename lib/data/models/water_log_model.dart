@@ -9,7 +9,7 @@ class WaterLogModel {
     return WaterLogModel(
       id: json['id'] ?? '',
       amount: json['amount'] ?? 0,
-      date: DateTime.parse(json['date'].toString().replaceAll('Z', '')),
+      date: DateTime.parse(json['date'].toString()).toLocal(),
     );
   }
 }
