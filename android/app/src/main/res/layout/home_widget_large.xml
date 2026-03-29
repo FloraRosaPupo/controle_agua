@@ -91,7 +91,8 @@
                 android:layout_marginTop="12dp"
                 android:indeterminate="false"
                 android:max="100"
-                android:progress="0" />
+                android:progress="0"
+                android:progressDrawable="@drawable/widget_progress_bar" />
         </LinearLayout>
 
         <LinearLayout
