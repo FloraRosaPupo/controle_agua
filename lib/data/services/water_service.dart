@@ -27,7 +27,7 @@ class WaterService {
         '/water',
         data: {'amount': amount},
       );
-      return response.statusCode == 200;
+      return response.statusCode == 200 || response.statusCode == 201;
     } on DioException catch (e) {
       throw Exception(
         'Erro ao adicionar água: ${e.response?.data['error'] ?? e.message}',

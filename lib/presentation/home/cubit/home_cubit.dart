@@ -42,7 +42,10 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
-  void _emitLoadedFromModel(DailyWaterDataModel data) {
+  void _emitLoadedFromModel(
+    DailyWaterDataModel data, {
+    bool notifyProgress = false,
+  }) {
     final currentIntake = data.total;
     final dailyGoal = data.dailyGoal;
 
@@ -77,11 +80,13 @@ class HomeCubit extends Cubit<HomeState> {
       ),
     );
 
-    _notificationService.checkProgressAndNotify(
-      current: currentIntake,
-      goal: dailyGoal,
-      userName: data.name,
-    );
+    if (notifyProgress) {
+      _notificationService.checkProgressAndNotify(
+        current: currentIntake,
+        goal: dailyGoal,
+        userName: data.name,
+      );
+    }
   }
 
   Future<void> loadTodayData() async {
@@ -91,7 +96,7 @@ class HomeCubit extends Cubit<HomeState> {
       final data = await _waterService.getTodayData();
       if (data != null) {
         final normalized = await _resolveTodayDataWithFallback(data);
-        _emitLoadedFromModel(normalized);
+        _emitLoadedFromModel(normalized, notifyProgress: false);
       } else {
         emit(HomeError("Nenhum dado retornado da API."));
       }
@@ -106,7 +111,7 @@ class HomeCubit extends Cubit<HomeState> {
       final data = await _waterService.getTodayData();
       if (data != null) {
         final normalized = await _resolveTodayDataWithFallback(data);
-        _emitLoadedFromModel(normalized);
+        _emitLoadedFromModel(normalized, notifyProgress: false);
       } else if (state is! HomeLoaded) {
         emit(HomeError("Nenhum dado retornado da API."));
       }

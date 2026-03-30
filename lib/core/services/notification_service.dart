@@ -33,6 +33,15 @@ class NotificationService {
   Future<void> _scheduleChain = Future<void>.value();
 
   Timer? _debugNearFireTimer;
+  static const String _scheduledReminderPayload = 'hydration_recurring';
+  static const String _quickAddActionId = 'quick_add_water';
+  static const int _fallbackQuickAddAmountMl = 200;
+  static const int _scheduledReminderIdBase = 20000;
+  static const int _progressNotificationId = 30001;
+  static const int _goalReachedNotificationId = 30002;
+
+  Future<int> Function()? _quickAddAmountResolver;
+  Future<void> Function(int ml)? _onQuickAddFromNotification;
 
   String _androidChannelNowId() =>
       _vibrationEnabled ? 'bebeu_water_now' : 'bebeu_water_now_nv';
@@ -84,7 +93,7 @@ class NotificationService {
     }
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize({bool requestPermissions = true}) async {
     if (kIsWeb) {
       return; // Silencia no Web onde o plugin não é suportado da mesma forma
     }
@@ -116,9 +125,7 @@ class NotificationService {
 
     await _notificationsPlugin.initialize(
       settings: initSettings,
-      onDidReceiveNotificationResponse: (details) {
-        // Handle notification tap
-      },
+      onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
     // Request notification permission on Android 13+
@@ -127,10 +134,54 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (androidPlugin != null) {
-      await androidPlugin.requestNotificationsPermission();
-      // Alarmes agendados: inexact costuma não disparar no horário com Doze / Android 14+.
-      await androidPlugin.requestExactAlarmsPermission();
+      if (requestPermissions) {
+        await androidPlugin.requestNotificationsPermission();
+        // Alarmes agendados: inexact costuma não disparar no horário com Doze / Android 14+.
+        await androidPlugin.requestExactAlarmsPermission();
+      }
       await _syncAndroidChannels();
+    }
+  }
+
+  /// Conecta o botão "+" das notificações com a lógica real de adicionar água.
+  void configureQuickAddAction({
+    Future<int> Function()? resolveQuickAddAmount,
+    Future<void> Function(int ml)? onQuickAdd,
+  }) {
+    _quickAddAmountResolver = resolveQuickAddAmount;
+    _onQuickAddFromNotification = onQuickAdd;
+  }
+
+  Future<void> _onNotificationResponse(NotificationResponse details) async {
+    final isQuickAddAction = details.actionId == _quickAddActionId;
+    final isRecurringReminder = details.payload == _scheduledReminderPayload;
+    if (!isQuickAddAction || !isRecurringReminder) return;
+
+    final quickAddMl = await _resolveQuickAddAmount();
+    final handler = _onQuickAddFromNotification;
+    if (handler == null) {
+      debugPrint(
+        '[BebeuNotify] Ação "+" ignorada: handler de quick add não configurado.',
+      );
+      return;
+    }
+
+    try {
+      await handler(quickAddMl);
+      debugPrint('[BebeuNotify] Ação "+" executada (+${quickAddMl}ml).');
+    } catch (e) {
+      debugPrint('[BebeuNotify] Falha ao executar ação "+" da notificação: $e');
+    }
+  }
+
+  Future<int> _resolveQuickAddAmount() async {
+    final resolver = _quickAddAmountResolver;
+    if (resolver == null) return _fallbackQuickAddAmountMl;
+    try {
+      final value = await resolver();
+      return value > 0 ? value : _fallbackQuickAddAmountMl;
+    } catch (_) {
+      return _fallbackQuickAddAmountMl;
     }
   }
 
@@ -160,6 +211,48 @@ class NotificationService {
       title: title,
       body: body,
       notificationDetails: details,
+    );
+  }
+
+  /// Dispara imediatamente um lembrete com a mesma ação "+" dos recorrentes.
+  Future<void> showRecurringReminderTestNotification() async {
+    if (kIsWeb) return;
+
+    final quickAddMlForAction = await _resolveQuickAddAmount();
+    final quickAddLabel = '+ ${quickAddMlForAction}ml';
+    final message = _nextReminderMessage();
+
+    await _notificationsPlugin.show(
+      id: DateTime.now().millisecondsSinceEpoch % 2147483647,
+      title: 'Bebeu?',
+      body: message,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannelScheduledId(),
+          'Lembretes Periódicos',
+          channelDescription: 'Lembretes para beber água ao longo do dia',
+          importance: Importance.max,
+          priority: Priority.high,
+          visibility: NotificationVisibility.public,
+          showWhen: true,
+          enableVibration: _vibrationEnabled,
+          playSound: true,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _quickAddActionId,
+              quickAddLabel,
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: _scheduledReminderPayload,
     );
   }
 
@@ -240,6 +333,7 @@ class NotificationService {
   /// Mínimo 30 min (igual às opções do app); evita intervalos antigos 1/5/15 vindos do servidor.
   int _scheduleStepMinutes(NotificationPreferences prefs) {
     final raw = prefs.intervalMinutes > 0 ? prefs.intervalMinutes : 60;
+    if (kDebugMode) return raw;
     return raw < 30 ? 30 : raw;
   }
 
@@ -498,12 +592,36 @@ class NotificationService {
     'Não esqueça da sua meta! Um pequeno gole faz diferença.',
     'Hidratação é saúde! Que tal um pouco d\'água agora?',
     'Água é vida! Vamos bater a meta de hoje?',
+    'Seu corpo agradece: hora de beber água.',
+    'Um lembrete amigo: tome água e siga firme.',
+    'Pausa rápida para hidratar? Seu bem-estar agradece.',
+    'Mais um gole e você fica mais perto da meta.',
+    'Respira fundo e bebe água: você merece esse cuidado.',
+    'Manter a hidratação em dia faz toda diferença.',
+    'Que tal um copo de água agora para renovar as energias?',
+    'Hidratar-se também é produtividade. Bora tomar água!',
+    'Bebeu água hoje? Este é seu lembrete carinhoso.',
+    'Pequenos goles ao longo do dia, grandes resultados.',
+    'Seu próximo copo d\'água está te esperando.',
+    'Hora de cuidar de você com um pouco de água.',
+    'Água na rotina: simples, leve e essencial.',
+    'Siga no ritmo da hidratação e bata sua meta.',
+    'Não deixe para depois: um gole agora já ajuda.',
   ];
+  int _reminderProgressMessageIndex = 0;
+
+  String _nextReminderMessage() {
+    final message =
+        _reminderMessages[_reminderProgressMessageIndex %
+            _reminderMessages.length];
+    _reminderProgressMessageIndex++;
+    return message;
+  }
 
   Future<void> _scheduleHydrationRemindersImpl(
     NotificationPreferences prefs,
   ) async {
-    await _notificationsPlugin.cancelAll();
+    await _cancelScheduledRemindersOnly();
     _cachedPrefsForReschedule = prefs.enabled ? prefs : null;
 
     if (!prefs.enabled) {
@@ -534,6 +652,8 @@ class NotificationService {
       startTotalMinutes: startTotalMinutes,
       endTotalMinutes: endTime.hour * 60 + endTime.minute,
     );
+    final quickAddMlForAction = await _resolveQuickAddAmount();
+    final quickAddLabel = '+ ${quickAddMlForAction}ml';
 
     AndroidScheduleMode androidScheduleMode =
         AndroidScheduleMode.exactAllowWhileIdle;
@@ -568,7 +688,7 @@ class NotificationService {
         messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
-          id: total,
+          id: _scheduledReminderIdBase + total,
           title: 'Bebeu?',
           body: message,
           scheduledDate: _nextDailyClockTime(hour, minute),
@@ -583,6 +703,15 @@ class NotificationService {
               showWhen: true,
               enableVibration: _vibrationEnabled,
               playSound: true,
+              actions: <AndroidNotificationAction>[
+                AndroidNotificationAction(
+                  _quickAddActionId,
+                  quickAddLabel,
+                  // Abre a UI para garantir que o callback rode e some água.
+                  showsUserInterface: true,
+                  cancelNotification: true,
+                ),
+              ],
             ),
             iOS: const DarwinNotificationDetails(
               presentAlert: true,
@@ -590,6 +719,7 @@ class NotificationService {
               presentSound: true,
             ),
           ),
+          payload: _scheduledReminderPayload,
           androidScheduleMode: androidScheduleMode,
           matchDateTimeComponents: DateTimeComponents.time,
         );
@@ -611,7 +741,7 @@ class NotificationService {
         messageIndex++;
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
-          id: s.weekday * 1440 + s.totalMinutes,
+          id: _scheduledReminderIdBase + (s.weekday * 1440 + s.totalMinutes),
           title: 'Bebeu?',
           body: message,
           scheduledDate: _nextWeekdayOccurrence(s.weekday, hour, minute),
@@ -626,6 +756,15 @@ class NotificationService {
               showWhen: true,
               enableVibration: _vibrationEnabled,
               playSound: true,
+              actions: <AndroidNotificationAction>[
+                AndroidNotificationAction(
+                  _quickAddActionId,
+                  quickAddLabel,
+                  // Abre a UI para garantir que o callback rode e some água.
+                  showsUserInterface: true,
+                  cancelNotification: true,
+                ),
+              ],
             ),
             iOS: const DarwinNotificationDetails(
               presentAlert: true,
@@ -633,6 +772,7 @@ class NotificationService {
               presentSound: true,
             ),
           ),
+          payload: _scheduledReminderPayload,
           androidScheduleMode: androidScheduleMode,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         );
@@ -666,9 +806,9 @@ class NotificationService {
     if (current >= goal && !_notifiedMilestones.contains(100)) {
       _notifiedMilestones.add(100);
       _stopProgressReminder();
-      _notificationsPlugin.cancel(id: 996);
+      _notificationsPlugin.cancel(id: _progressNotificationId);
       showProgressNotification(
-        id: 999,
+        id: _goalReachedNotificationId,
         title: '🎉 Meta atingida, $userName!',
         currentMl: current,
         goalMl: goal,
@@ -681,13 +821,14 @@ class NotificationService {
         !_notifiedMilestones.contains(80)) {
       _notifiedMilestones.add(80);
       _startProgressReminder();
+      final reminderMessage = _nextReminderMessage();
       showProgressNotification(
-        id: 996,
+        id: _progressNotificationId,
         title: '💧 Quase lá, $userName!',
         currentMl: current,
         goalMl: goal,
         percent: percent,
-        statusText: 'Continue assim',
+        statusText: reminderMessage,
         ongoing: false,
       );
     } else if (percent >= 70 &&
@@ -695,13 +836,14 @@ class NotificationService {
         !_notifiedMilestones.contains(70)) {
       _notifiedMilestones.add(70);
       _startProgressReminder();
+      final reminderMessage = _nextReminderMessage();
       showProgressNotification(
-        id: 996,
+        id: _progressNotificationId,
         title: '👏 Bom progresso, $userName!',
         currentMl: current,
         goalMl: goal,
         percent: percent,
-        statusText: 'Você está no caminho certo',
+        statusText: reminderMessage,
         ongoing: false,
       );
     }
@@ -732,17 +874,18 @@ class NotificationService {
 
     final String title;
     final String statusText;
+    final reminderMessage = _nextReminderMessage();
 
     if (percent >= 80) {
       title = '💧 Quase lá, $_lastUserName!';
-      statusText = 'Continue assim';
+      statusText = reminderMessage;
     } else {
       title = '👏 Bom progresso, $_lastUserName!';
-      statusText = 'Você está no caminho certo';
+      statusText = reminderMessage;
     }
 
     showProgressNotification(
-      id: 996,
+      id: _progressNotificationId,
       title: title,
       currentMl: _lastCurrent!,
       goalMl: _lastGoal!,
@@ -758,5 +901,14 @@ class NotificationService {
     _lastCurrent = null;
     _lastGoal = null;
     _lastUserName = null;
+  }
+
+  Future<void> _cancelScheduledRemindersOnly() async {
+    final pending = await _notificationsPlugin.pendingNotificationRequests();
+    for (final request in pending) {
+      if (request.payload == _scheduledReminderPayload) {
+        await _notificationsPlugin.cancel(id: request.id);
+      }
+    }
   }
 }

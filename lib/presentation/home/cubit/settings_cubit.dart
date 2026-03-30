@@ -52,7 +52,8 @@ class SettingsState {
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsService _settingsService;
 
-  SettingsCubit(this._settingsService) : super(SettingsState());
+  SettingsCubit(this._settingsService)
+      : super(SettingsState(theme: AppTheme.currentThemeString));
 
   static const double _dailyGoalMin = 500;
   static const double _dailyGoalMax = 5000;
@@ -60,22 +61,16 @@ class SettingsCubit extends Cubit<SettingsState> {
   double _clampDailyGoal(double v) =>
       v.clamp(_dailyGoalMin, _dailyGoalMax);
 
-  void _applyTheme(String themeString) {
-    if (themeString == 'dark') {
-      AppTheme.themeMode.value = ThemeMode.dark;
-    } else if (themeString == 'light') {
-      AppTheme.themeMode.value = ThemeMode.light;
-    } else {
-      AppTheme.themeMode.value = ThemeMode.system;
-    }
+  Future<void> _applyTheme(String themeString, {bool persist = false}) async {
+    await AppTheme.setThemeFromString(themeString, persist: persist);
   }
 
   Future<void> loadSettings() async {
     emit(state.copyWith(isLoading: true));
     try {
       final data = await _settingsService.getSettings();
-      final themeStr = data['theme'] ?? 'system';
-      _applyTheme(themeStr);
+      final themeStr = data['theme'] ?? AppTheme.currentThemeString;
+      await _applyTheme(themeStr, persist: true);
 
       emit(
         state.copyWith(
@@ -105,7 +100,7 @@ class SettingsCubit extends Cubit<SettingsState> {
     // Optimistic Update
     final oldState = state;
     if (key == 'theme') {
-      _applyTheme(value as String);
+      await _applyTheme(value as String, persist: true);
       emit(state.copyWith(theme: value));
     } else if (key == 'dailyReminder') {
       emit(state.copyWith(dailyReminder: value as bool));
@@ -133,7 +128,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       // Revert optimistic update
       emit(oldState);
       if (key == 'theme') {
-        _applyTheme(oldState.theme);
+        await _applyTheme(oldState.theme, persist: true);
       }
       if (key == 'vibration') {
         await NotificationService().setVibrationEnabled(oldState.vibration);

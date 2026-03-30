@@ -1,10 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_colors.dart';
 
 class AppTheme {
+  static const String _themeModeKey = 'theme_mode';
   static final ValueNotifier<ThemeMode> themeMode = ValueNotifier(
     ThemeMode.system,
   );
+  static SharedPreferences? _prefs;
+
+  static Future<void> initialize() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    final savedMode = _prefs?.getString(_themeModeKey);
+    themeMode.value = _themeModeFromString(savedMode);
+  }
+
+  static Future<void> setThemeFromString(
+    String themeString, {
+    bool persist = false,
+  }) async {
+    themeMode.value = _themeModeFromString(themeString);
+    if (!persist) return;
+
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs?.setString(_themeModeKey, themeString);
+  }
+
+  static String get currentThemeString => _themeModeToString(themeMode.value);
+
+  static ThemeMode _themeModeFromString(String? themeString) {
+    if (themeString == 'dark') return ThemeMode.dark;
+    if (themeString == 'light') return ThemeMode.light;
+    return ThemeMode.system;
+  }
+
+  static String _themeModeToString(ThemeMode mode) {
+    if (mode == ThemeMode.dark) return 'dark';
+    if (mode == ThemeMode.light) return 'light';
+    return 'system';
+  }
 
   // =========================
   // LIGHT THEME

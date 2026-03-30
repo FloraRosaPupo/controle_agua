@@ -45,7 +45,8 @@ class AppBlocObserver extends BlocObserver {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await AppTheme.initialize();
+
   // Ativa o observer para debugar estados (apenas em debug)
   if (kDebugMode) {
     Bloc.observer = AppBlocObserver();
@@ -56,17 +57,50 @@ void main() async {
   final notificationService = NotificationService();
   await notificationService.initialize();
 
-  if (!kIsWeb) {
-    WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
-  }
-
   final apiClient = ApiClient();
   final authService = AuthService(apiClient);
   final waterService = WaterService(apiClient);
   final settingsService = SettingsService(apiClient);
+  notificationService.configureQuickAddAction(
+    resolveQuickAddAmount: () async {
+      final data = await settingsService.getSettings();
+      final raw = data['quickAddAmount'];
+      if (raw is num && raw > 0) return raw.toInt();
+      return 200;
+    },
+    onQuickAdd: (ml) async {
+      final added = await waterService.addWater(ml);
+      if (!added) return;
+
+      final today = await waterService.getTodayData();
+      if (today == null || today.dailyGoal <= 0) return;
+
+      final percent = ((today.total / today.dailyGoal) * 100).toInt().clamp(
+        0,
+        100,
+      );
+      final status = 'Você adicionou ${ml}ml';
+      await notificationService.showProgressNotification(
+        id: 995,
+        title: '+${ml}ml registrado ✅',
+        currentMl: today.total,
+        goalMl: today.dailyGoal,
+        percent: percent,
+        statusText: status,
+        ongoing: false,
+      );
+    },
+  );
 
   // Verifica se temos token localmente antes de decidir a tela principal!
   final loggedIn = await authService.isLoggedIn();
+  if (!kIsWeb) {
+    await _syncWidgetWithLatestData(
+      isLoggedIn: loggedIn,
+      waterService: waterService,
+      settingsService: settingsService,
+    );
+  }
 
   final router = GoRouter(
     initialLocation: '/splash',
@@ -89,18 +123,13 @@ void main() async {
           child: const RegisterPage(),
         ),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomePage(),
-      ),
+      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
     ],
   );
 
   runApp(
     MultiProvider(
-      providers: [
-        RepositoryProvider<AuthService>.value(value: authService),
-      ],
+      providers: [RepositoryProvider<AuthService>.value(value: authService)],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => HomeCubit(waterService)..loadTodayData()),
@@ -111,13 +140,43 @@ void main() async {
             create: (_) => SettingsCubit(settingsService)..loadSettings(),
           ),
           BlocProvider(
-            create: (_) => NotificationCubit(settingsService)..loadPreferences(),
+            create: (_) =>
+                NotificationCubit(settingsService)..loadPreferences(),
           ),
         ],
         child: MyApp(router: router),
       ),
     ),
   );
+}
+
+Future<void> _syncWidgetWithLatestData({
+  required bool isLoggedIn,
+  required WaterService waterService,
+  required SettingsService settingsService,
+}) async {
+  if (!isLoggedIn) {
+    await WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
+    return;
+  }
+
+  try {
+    final settings = await settingsService.getSettings();
+    final fallbackGoal = (settings['dailyGoal'] as num?)?.toInt() ?? 2000;
+    final today = await waterService.getTodayData();
+
+    final total = today?.total ?? 0;
+    final goal = (today?.dailyGoal ?? fallbackGoal).clamp(1, 100000);
+    final progress = (total / goal).clamp(0.0, 1.0);
+
+    await WidgetService.updateHomeWidget(
+      progress: progress,
+      currentIntake: total,
+      goal: goal,
+    );
+  } catch (_) {
+    await WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
+  }
 }
 
 class MyApp extends StatefulWidget {
