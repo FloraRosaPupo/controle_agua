@@ -431,10 +431,16 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
               onTap: () {
                 final newDays = List<int>.from(prefs.activeDays);
                 if (isSelected) {
+                  if (newDays.length == 1) {
+                    return;
+                  }
                   newDays.remove(dayIndex);
                 } else {
-                  newDays.add(dayIndex);
+                  if (!newDays.contains(dayIndex)) {
+                    newDays.add(dayIndex);
+                  }
                 }
+                newDays.sort();
                 _updatePrefs(prefs.copyWith(activeDays: newDays));
               },
               child: Container(
