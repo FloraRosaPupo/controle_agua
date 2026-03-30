@@ -2,20 +2,29 @@ import { prisma } from "./prisma"
 import { Response } from "express"
 import { AuthRequest } from "./types"
 
-function getStartOfUserDayInUTC(req: AuthRequest): Date {
+function getUserTimezoneOffsetMinutes(req: AuthRequest): number {
     const offsetHeader = req.header('x-timezone-offset')
-    // Se o header for -180 (Brasil), offsetMinutes será -180
-    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0
+    return offsetHeader ? parseInt(offsetHeader) : 0
+}
+
+function getStartOfUserDayInUTC(req: AuthRequest): Date {
+    // x-timezone-offset vem do app como local - UTC (ex.: Brasil = -180)
+    const offsetMinutes = getUserTimezoneOffsetMinutes(req)
 
     const now = new Date()
-    // Convert to user's local time numbers but still as a UTC Date object
-    // Ex: UTC 22:00 + (-180 min) = 19:00 UTC
+    // Converte para "relógio local do usuário" em um objeto Date UTC
     const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000))
 
-    // Zera para meia-noite nesse "relógio local"
+    // Define meia-noite local do usuário
     userLocalNow.setUTCHours(0, 0, 0, 0)
 
-    return userLocalNow
+    // Converte de volta para UTC real para filtrar no banco
+    return new Date(userLocalNow.getTime() - (offsetMinutes * 60 * 1000))
+}
+
+function getEndOfUserDayInUTC(req: AuthRequest): Date {
+    const startOfDay = getStartOfUserDayInUTC(req)
+    return new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1)
 }
 
 export async function addWater(req: AuthRequest, res: Response) {
@@ -114,12 +123,17 @@ export async function today(req: AuthRequest, res: Response) {
     const userId = req.userId
 
     const startOfDay = getStartOfUserDayInUTC(req)
+    const endOfDay = getEndOfUserDayInUTC(req)
 
     const logs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
-            date: { gte: startOfDay }
-        }
+            date: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        },
+        orderBy: { date: 'desc' }
     })
 
     const total = logs.reduce((acc, log) => acc + log.amount, 0)
@@ -173,4 +187,4 @@ export async function deleteWater(req: AuthRequest, res: Response) {
         res.status(500).json({ error: "Erro ao excluir registro" })
     }
 }
-
+

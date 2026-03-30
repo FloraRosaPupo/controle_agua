@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/daily_water_data_model.dart';
+import '../../../data/models/water_log_model.dart';
 import '../../../data/services/water_service.dart';
 import '../../../core/services/widget_service.dart';
 import '../../../core/services/notification_service.dart';
@@ -11,6 +12,35 @@ class HomeCubit extends Cubit<HomeState> {
   final NotificationService _notificationService = NotificationService();
 
   HomeCubit(this._waterService) : super(HomeInitial());
+
+  Future<DailyWaterDataModel> _resolveTodayDataWithFallback(
+    DailyWaterDataModel data,
+  ) async {
+    if (data.logs.isNotEmpty) return data;
+
+    final now = DateTime.now();
+    final date =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    final history = await _waterService.getHistory(date: date);
+    final historyLogs = (history?['logs'] as List?) ?? const [];
+    if (historyLogs.isEmpty) return data;
+
+    final logs = historyLogs
+        .whereType<Map>()
+        .map((raw) => WaterLogModel.fromJson(Map<String, dynamic>.from(raw)))
+        .toList();
+    final total = logs.fold<int>(0, (sum, log) => sum + log.amount);
+
+    return DailyWaterDataModel(
+      total: total,
+      dailyGoal: data.dailyGoal,
+      name: data.name,
+      remaining: (data.dailyGoal - total).clamp(0, data.dailyGoal),
+      percent: data.dailyGoal == 0 ? 0 : total / data.dailyGoal,
+      logs: logs,
+    );
+  }
 
   void _emitLoadedFromModel(DailyWaterDataModel data) {
     final currentIntake = data.total;
@@ -60,7 +90,8 @@ class HomeCubit extends Cubit<HomeState> {
     try {
       final data = await _waterService.getTodayData();
       if (data != null) {
-        _emitLoadedFromModel(data);
+        final normalized = await _resolveTodayDataWithFallback(data);
+        _emitLoadedFromModel(normalized);
       } else {
         emit(HomeError("Nenhum dado retornado da API."));
       }
@@ -74,7 +105,8 @@ class HomeCubit extends Cubit<HomeState> {
     try {
       final data = await _waterService.getTodayData();
       if (data != null) {
-        _emitLoadedFromModel(data);
+        final normalized = await _resolveTodayDataWithFallback(data);
+        _emitLoadedFromModel(normalized);
       } else if (state is! HomeLoaded) {
         emit(HomeError("Nenhum dado retornado da API."));
       }
