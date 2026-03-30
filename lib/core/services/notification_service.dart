@@ -243,6 +243,17 @@ class NotificationService {
     return raw < 30 ? 30 : raw;
   }
 
+  int _normalizedEndMinutes({
+    required int startTotalMinutes,
+    required int endTotalMinutes,
+  }) {
+    // UX comum: usuário define "00:00" como fim do dia.
+    if (endTotalMinutes == 0 && startTotalMinutes > 0) {
+      return 23 * 60 + 59;
+    }
+    return endTotalMinutes;
+  }
+
   bool _activeDaysAreFullWeek(List<int> activeDays) {
     return activeDays.toSet().containsAll(_allWeekdays);
   }
@@ -369,7 +380,10 @@ class NotificationService {
 
     final stepMinutes = _scheduleStepMinutes(prefs);
     final startTotalMinutes = startTime.hour * 60 + startTime.minute;
-    final endTotalMinutes = endTime.hour * 60 + endTime.minute;
+    final endTotalMinutes = _normalizedEndMinutes(
+      startTotalMinutes: startTotalMinutes,
+      endTotalMinutes: endTime.hour * 60 + endTime.minute,
+    );
 
     final list = <tz.TZDateTime>[];
 
@@ -516,7 +530,10 @@ class NotificationService {
     final stepMinutes = _scheduleStepMinutes(prefs);
 
     final startTotalMinutes = startTime.hour * 60 + startTime.minute;
-    final endTotalMinutes = endTime.hour * 60 + endTime.minute;
+    final endTotalMinutes = _normalizedEndMinutes(
+      startTotalMinutes: startTotalMinutes,
+      endTotalMinutes: endTime.hour * 60 + endTime.minute,
+    );
 
     AndroidScheduleMode androidScheduleMode =
         AndroidScheduleMode.exactAllowWhileIdle;

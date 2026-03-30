@@ -147,7 +147,7 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
                                 (time) => _updatePrefs(
                                   prefs.copyWith(
                                     endTime:
-                                        "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}",
+                                      _formatEndTime(time),
                                   ),
                                 ),
                               ),
@@ -316,14 +316,19 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
               context: context,
               initialTime: time,
               builder: (context, child) {
-                return Theme(
-                  data: theme.copyWith(
-                    colorScheme: colors.copyWith(
-                      surface: colors.surface,
-                      onSurface: colors.onSurface,
+                return MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(alwaysUse24HourFormat: true),
+                  child: Theme(
+                    data: theme.copyWith(
+                      colorScheme: colors.copyWith(
+                        surface: colors.surface,
+                        onSurface: colors.onSurface,
+                      ),
                     ),
+                    child: child!,
                   ),
-                  child: child!,
                 );
               },
             );
@@ -354,6 +359,14 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
         ),
       ],
     );
+  }
+
+  String _formatEndTime(TimeOfDay time) {
+    // "00:00" no término representa fim do dia no app.
+    final normalized = (time.hour == 0 && time.minute == 0)
+        ? const TimeOfDay(hour: 23, minute: 59)
+        : time;
+    return "${normalized.hour.toString().padLeft(2, '0')}:${normalized.minute.toString().padLeft(2, '0')}";
   }
 
   Widget _buildDaysShortcuts(

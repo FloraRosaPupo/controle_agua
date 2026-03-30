@@ -51,7 +51,7 @@ class NotificationCubit extends Cubit<NotificationState> {
 
       try {
         await _settingsService.updateSettings({
-          'notifications': prefs.toJson(),
+          'notificationSettings': prefs.toJson(),
         });
         await _notificationService.scheduleHydrationReminders(prefs);
       } catch (e) {
