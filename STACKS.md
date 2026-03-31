@@ -982,6 +982,101 @@ Se o problema for:
 
 ---
 
+## Roteiro Junior: explicar (e replicar) as stacks com clareza
+
+Essa seção existe pra você conseguir pegar qualquer iniciante e fazer uma explicação completa sem “pular” o essencial.
+A ordem mental é sempre a mesma:
+
+`Entrada (main.dart)` → `Navegação (go_router)` → `Estado (Cubit/State)` → `API (Service + ApiClient)` → `Auth/Storage` → `Notificações + Widget` → `Backend`.
+
+### 0) Script de 30 segundos (pra começar bem)
+
+Quando alguém perguntar “como esse app funciona?”, responda:
+
+1. “O app sobe em `lib/main.dart`, registra rotas no `GoRouter` e monta os providers (Cubits).”
+2. “As telas desenham o estado e chamam ações; quem conversa com API são os `Services`.”
+3. “Os `Services` usam `dio` via `ApiClient`, com JWT no header `Authorization: Bearer ...`.”
+4. “Notificações e widget ficam em `core/` (ex.: `NotificationService` e `home_widget`).”
+5. “O backend é o dono do contrato: Express + Prisma (ex.: endpoints `GET /water/today` e `GET /settings`).”
+
+### 1) Cada stack com 1 frase + 1 exemplo de arquivo (o mínimo completo)
+
+#### Flutter (UI base)
+- **Onde**: `lib/presentation/`
+- **Exemplo**: `lib/presentation/home/widgets/alerts_view.dart` renderiza a UI a partir de `NotificationCubit`.
+- **Nunca faça**: chamar `dio` direto na tela.
+
+#### Navegação: `go_router`
+- **Onde**: `lib/main.dart`
+- **Exemplo**: rota `/login` cria `LoginCubit(authService)` e mostra `LoginPage`.
+- **Nunca faça**: misturar `Navigator.push` em todo lugar sem critério.
+
+#### Estado: `flutter_bloc` / `Cubit`
+- **Onde**: `lib/presentation/**/cubit/`
+- **Exemplo**: `HomeCubit.loadTodayData()` chama `WaterService.getTodayData()`.
+- **Nunca faça**: lógica de regra de negócio no `build`.
+
+#### HTTP: `dio` + `ApiClient`
+- **Onde**:
+  - `lib/core/api/api_client.dart`
+  - `lib/data/services/*_service.dart`
+- **Exemplo**: `WaterService.addWater()` faz `POST /water`.
+- **Nunca faça**: criar `Dio()` “solto” sem usar o `ApiClient`.
+
+#### Auth + Persistência: `flutter_secure_storage` (JWT) e `shared_preferences` (preferências)
+- **Onde**: `lib/data/services/auth_service.dart` e `lib/core/theme/app_theme.dart`
+- **Exemplo**:
+  - `AuthService` salva `jwt_token` no secure storage.
+  - `AppTheme.initialize()` lê `theme_mode` do `SharedPreferences`.
+- **Nunca faça**: guardar JWT em `SharedPreferences`.
+
+#### Notificações: `flutter_local_notifications` + `timezone`
+- **Onde**: `lib/core/services/notification_service.dart`
+- **Exemplo**:
+  - `scheduleHydrationReminders(...)` usa `zonedSchedule(...)`.
+  - `checkProgressAndNotify(...)` mostra “Bom progresso” por id fixo.
+- **Nunca faça**: pedir permissão de notificação em background sem `Activity` (use `requestPermissions: false` no worker do widget).
+
+#### Tema: `AppTheme`
+- **Onde**: `lib/core/theme/app_theme.dart`, usado por `SettingsCubit`
+- **Exemplo**:
+  - `SettingsCubit.loadSettings()` aplica tema vindo de `/settings` e persiste.
+
+#### Widget do sistema: `home_widget`
+- **Onde**:
+  - Kotlin: `android/app/src/main/kotlin/...HomeWidget*Provider.kt`
+  - Dart callback: `lib/core/home_widget_interactive.dart`
+  - Update: `lib/core/services/widget_service.dart`
+- **Exemplo**:
+  - Kotlin dispara URI `homeWidget://addwater`
+  - Dart callback faz `WaterService.addWater(...)`, depois chama `showProgressNotification(...)` e atualiza o widget.
+
+### 2) Guia final: como “clonar” essas stacks em outros projetos (sem misturar camadas)
+
+Use essa checklist como modelo:
+
+1. **Backend define contrato**:
+   - endpoints (paths) + JSON request/response
+   - autenticação (JWT) e middleware (ex.: `authMiddleware`)
+2. **App cria Navigation**:
+   - rotas `/login`, `/home`, etc. no `GoRouter`
+3. **App cria State por tela**:
+   - para cada tela que chama API, cria um Cubit com `Loading/Loaded/Error`
+4. **App cria Service por domínio**:
+   - `AuthService`, `WaterService`, `SettingsService` (ou seus equivalentes)
+5. **App cria Model para os dados mais importantes**:
+   - evita `Map` espalhado no resto da UI
+6. **App centraliza HTTP**:
+   - usa `ApiClient` para `baseUrl`, `timeout`, header `Authorization`
+7. **Auth e storage**:
+   - JWT vai em `FlutterSecureStorage`
+   - preferências leves/tema em `SharedPreferences` via `AppTheme`
+8. **Sistema operacional (se precisar)**:
+   - notificações: `NotificationService`
+   - widget: `home_widget` (Kotlin + callback Dart)
+
+Se seguir essa ordem, você terá as mesmas stacks do projeto e não vai cair na armadilha clássica de “UI chamando API” ou “estado misturado com layout”.
+
 ## Resumo dos ajustes recentes (para você não “perder o fio”)
 
 Esta seção documenta mudanças importantes que já estão no código — útil em code review, onboarding e quando algo “parecia bug” mas era detalhe de plataforma.
