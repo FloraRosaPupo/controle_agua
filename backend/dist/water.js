@@ -5,29 +5,36 @@ exports.history = history;
 exports.today = today;
 exports.deleteWater = deleteWater;
 const prisma_1 = require("./prisma");
-function getStartOfUserDayInUTC(req) {
+function getUserTimezoneOffsetMinutes(req) {
     const offsetHeader = req.header('x-timezone-offset');
-    // offset in minutes from client, e.g. -180 for Brazil
-    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0;
+    return offsetHeader ? parseInt(offsetHeader) : 0;
+}
+function getStartOfUserDayInUTC(req) {
+    // x-timezone-offset vem do app como local - UTC (ex.: Brasil = -180)
+    const offsetMinutes = getUserTimezoneOffsetMinutes(req);
     const now = new Date();
-    // adjust now to user's local "day" (User clock = UTC + offset)
+    // Converte para "relógio local do usuário" em um objeto Date UTC
     const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000));
-    // reset to midnight in that offset's "world"
+    // Define meia-noite local do usuário
     userLocalNow.setUTCHours(0, 0, 0, 0);
-    // convert back to UTC for DB query
+    // Converte de volta para UTC real para filtrar no banco
     return new Date(userLocalNow.getTime() - (offsetMinutes * 60 * 1000));
+}
+function getEndOfUserDayInUTC(req) {
+    const startOfDay = getStartOfUserDayInUTC(req);
+    return new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 async function addWater(req, res) {
     const { amount } = req.body;
     const userId = req.userId;
-    if (typeof amount !== 'number' || amount === 0) {
-        return res.status(400).json({ error: "Quantidade inválida" });
+    if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: "Quantidade deve ser maior que zero" });
     }
     try {
         await prisma_1.prisma.waterLog.create({
             data: {
                 amount,
-                date: new Date(),
+                date: new Date(), // Sempre salva em UTC puro
                 userId: userId
             }
         });
@@ -43,17 +50,13 @@ async function history(req, res) {
     let endDate;
     const { period, date } = req.query;
     if (date) {
+        // Date is like '2026-03-27'
         startDate = new Date(date);
         startDate.setUTCHours(0, 0, 0, 0);
-        // If the date is passed, we should ideally still apply the offset, but since it's a fixed date string (e.g. 2026-03-27),
-        // we'll treat it as midnight UTC + offset.
-        const offsetHeader = req.header('x-timezone-offset');
-        const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0;
-        startDate = new Date(startDate.getTime() - (offsetMinutes * 60 * 1000));
         endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1);
     }
     else {
-        const days = period === '30d' ? 30 : 7;
+        const days = 7;
         startDate = getStartOfUserDayInUTC(req);
         startDate.setDate(startDate.getDate() - days);
         endDate = new Date();
@@ -77,17 +80,18 @@ async function history(req, res) {
     }
     const dailyGoal = user.dailyGoal;
     // Cálculo de estatísticas (ajustado para timezone)
-    const offsetHeader = req.header('x-timezone-offset');
-    const offsetMinutes = offsetHeader ? parseInt(offsetHeader) : 0;
+    // Se já ajustamos na inserção, os logs estão em "hora local".
+    // Mas startDate/endDate podem estar desalinhados se não tomarmos cuidado.
     const logsByDay = {};
     logs.forEach(log => {
-        const localDate = new Date(log.date.getTime() + (offsetMinutes * 60 * 1000));
-        const day = localDate.toISOString().split('T')[0];
+        // Se a data já foi salva com o offset (no addWater), não precisamos adicionar de novo.
+        // O log.date já representa a hora local do usuário.
+        const day = log.date.toISOString().split('T')[0];
         logsByDay[day] = (logsByDay[day] || 0) + log.amount;
     });
     const daysCount = Object.keys(logsByDay).length || 1;
     const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0);
-    const average = Math.round(totalIntake / (period === '30d' ? 30 : 7));
+    const average = Math.round(totalIntake / 7);
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length;
     res.json({
         logs,
@@ -95,18 +99,23 @@ async function history(req, res) {
         stats: {
             average,
             goalsMet,
-            totalDays: period === '30d' ? 30 : 7
+            totalDays: 7
         }
     });
 }
 async function today(req, res) {
     const userId = req.userId;
     const startOfDay = getStartOfUserDayInUTC(req);
+    const endOfDay = getEndOfUserDayInUTC(req);
     const logs = await prisma_1.prisma.waterLog.findMany({
         where: {
             userId: userId,
-            date: { gte: startOfDay }
-        }
+            date: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        },
+        orderBy: { date: 'desc' }
     });
     const total = logs.reduce((acc, log) => acc + log.amount, 0);
     // Buscamos o usuário para saber a meta diária dele

@@ -198,9 +198,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ],
       ),
       child: ElevatedButton.icon(
-        onPressed: () => context.read<HomeCubit>().addWater(
-          settingsState.quickAddAmount.toInt(),
-        ),
+        onPressed: () async {
+          final error = await context.read<HomeCubit>().addWater(
+            settingsState.quickAddAmount.toInt(),
+          );
+          if (error != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error), backgroundColor: Colors.red),
+            );
+          }
+        },
         icon: const Icon(Icons.add_circle, color: Colors.black),
         label: const Text(
           "Adicionar Água",
@@ -244,7 +251,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => context.read<HomeCubit>().addWater(amount),
+        onTap: () async {
+          final error = await context.read<HomeCubit>().addWater(amount);
+          if (error != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error), backgroundColor: Colors.red),
+            );
+          }
+        },
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -372,7 +386,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         if (state is HomeInitial || state is HomeLoading) {
           return const Center(child: WaterLottie(size: 120));
         } else if (state is HomeError) {
-          return Center(child: Text(state.message));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 60, color: colors.error.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                Text('Sem conexão ou erro de rede', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                  child: Text(state.message, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => context.read<HomeCubit>().loadTodayData(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Tentar novamente'),
+                ),
+              ],
+            ),
+          );
         } else if (state is HomeLoaded) {
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -425,8 +459,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           extendBody: true,
           floatingActionButton: AddWaterButton(
             milliliters: quickAddMl,
-            onPressed: () => context.read<HomeCubit>().addWater(quickAddMl),
-            onCustomAmount: (ml) => context.read<HomeCubit>().addWater(ml),
+            onPressed: () async {
+              final error = await context.read<HomeCubit>().addWater(quickAddMl);
+              if (error != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error), backgroundColor: Colors.red),
+                );
+              }
+            },
+            onCustomAmount: (ml) async {
+              final error = await context.read<HomeCubit>().addWater(ml);
+              if (error != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error), backgroundColor: Colors.red),
+                );
+              }
+            },
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,

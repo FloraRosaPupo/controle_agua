@@ -13,6 +13,7 @@ class SettingsState {
   final bool dailyReminder;
   final bool vibration;
   final bool isLoading;
+  final String? error;
 
   SettingsState({
     this.name = '',
@@ -23,6 +24,7 @@ class SettingsState {
     this.dailyReminder = true,
     this.vibration = true,
     this.isLoading = true,
+    this.error,
   });
 
   SettingsState copyWith({
@@ -34,6 +36,8 @@ class SettingsState {
     bool? dailyReminder,
     bool? vibration,
     bool? isLoading,
+    String? error,
+    bool clearError = false,
   }) {
     return SettingsState(
       name: name ?? this.name,
@@ -44,6 +48,7 @@ class SettingsState {
       dailyReminder: dailyReminder ?? this.dailyReminder,
       vibration: vibration ?? this.vibration,
       isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 }
@@ -66,7 +71,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   Future<void> loadSettings() async {
-    emit(state.copyWith(isLoading: true));
+    emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final data = await _settingsService.getSettings();
       final themeStr = data['theme'] ?? AppTheme.currentThemeString;
@@ -82,12 +87,13 @@ class SettingsCubit extends Cubit<SettingsState> {
           dailyReminder: data['dailyReminder'] ?? true,
           vibration: data['vibration'] ?? true,
           isLoading: false,
+          clearError: true,
         ),
       );
       await NotificationService().setVibrationEnabled(state.vibration);
     } catch (e) {
       debugPrint("Erro loadSettings: \$e");
-      emit(state.copyWith(isLoading: false));
+      emit(state.copyWith(isLoading: false, error: 'Falha de conexão. Tente novamente.', clearError: false));
     }
   }
 

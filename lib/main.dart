@@ -69,26 +69,34 @@ void main() async {
       return 200;
     },
     onQuickAdd: (ml) async {
-      final added = await waterService.addWater(ml);
-      if (!added) return;
+      try {
+        final added = await waterService.addWater(ml);
+        if (!added) return;
 
-      final today = await waterService.getTodayData();
-      if (today == null || today.dailyGoal <= 0) return;
+        final today = await waterService.getTodayData();
+        if (today == null || today.dailyGoal <= 0) return;
 
-      final percent = ((today.total / today.dailyGoal) * 100).toInt().clamp(
-        0,
-        100,
-      );
-      final status = 'Você adicionou ${ml}ml';
-      await notificationService.showProgressNotification(
-        id: 995,
-        title: '+${ml}ml registrado ✅',
-        currentMl: today.total,
-        goalMl: today.dailyGoal,
-        percent: percent,
-        statusText: status,
-        ongoing: false,
-      );
+        final percent = ((today.total / today.dailyGoal) * 100).toInt().clamp(
+          0,
+          100,
+        );
+        final status = 'Você adicionou ${ml}ml';
+        await notificationService.showProgressNotification(
+          id: 995,
+          title: '+${ml}ml registrado ✅',
+          currentMl: today.total,
+          goalMl: today.dailyGoal,
+          percent: percent,
+          statusText: status,
+          ongoing: false,
+        );
+      } catch (e) {
+        await notificationService.showNotification(
+          id: 8889,
+          title: 'Bebeu?',
+          body: 'Sinal fraco, tente novamente.',
+        );
+      }
     },
   );
 

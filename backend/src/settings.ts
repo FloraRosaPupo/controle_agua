@@ -53,7 +53,10 @@ export async function updateSettings(req: Request, res: Response) {
         }
 
         // Pega do body os campos que o app enviar (todos são opcionais para o update)
-        const { name, dailyGoal, quickAddAmount, theme, dailyReminder, vibration, notifications } = req.body;
+        const { name, dailyGoal, quickAddAmount, theme, dailyReminder, vibration, notificationSettings: reqNotifications } = req.body;
+
+        // Suporta tanto a chave antiga "notifications" quanto a nova "notificationSettings" do app
+        const appNotificationsPayload = reqNotifications || req.body.notifications;
 
         // Update user fields (without notificationSettings - handled separately)
         const updatedUser = await prisma.user.update({
@@ -78,31 +81,31 @@ export async function updateSettings(req: Request, res: Response) {
         });
 
         // Handle notification settings separately with upsert
-        let notificationSettings = null;
-        if (notifications) {
-            notificationSettings = await prisma.notificationSetting.upsert({
+        let dbNotificationSettings = null;
+        if (appNotificationsPayload) {
+            dbNotificationSettings = await prisma.notificationSetting.upsert({
                 where: { userId },
                 create: {
                     userId,
-                    type: notifications.type || "hourly",
-                    intervalInMinutes: notifications.intervalInMinutes || 60,
-                    daysOfWeek: notifications.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
-                    startTime: notifications.startTime || "08:00",
-                    endTime: notifications.endTime || "22:00",
-                    enabled: notifications.enabled !== undefined ? notifications.enabled : true,
+                    type: appNotificationsPayload.type || "hourly",
+                    intervalInMinutes: appNotificationsPayload.intervalInMinutes || 60,
+                    daysOfWeek: appNotificationsPayload.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+                    startTime: appNotificationsPayload.startTime || "08:00",
+                    endTime: appNotificationsPayload.endTime || "22:00",
+                    enabled: appNotificationsPayload.enabled !== undefined ? appNotificationsPayload.enabled : true,
                 },
                 update: {
-                    type: notifications.type,
-                    intervalInMinutes: notifications.intervalInMinutes,
-                    daysOfWeek: notifications.daysOfWeek,
-                    startTime: notifications.startTime,
-                    endTime: notifications.endTime,
-                    enabled: notifications.enabled,
+                    type: appNotificationsPayload.type,
+                    intervalInMinutes: appNotificationsPayload.intervalInMinutes,
+                    daysOfWeek: appNotificationsPayload.daysOfWeek,
+                    startTime: appNotificationsPayload.startTime,
+                    endTime: appNotificationsPayload.endTime,
+                    enabled: appNotificationsPayload.enabled,
                 },
             });
         } else {
             // Fetch existing notification settings
-            notificationSettings = await prisma.notificationSetting.findUnique({
+            dbNotificationSettings = await prisma.notificationSetting.findUnique({
                 where: { userId },
             });
         }
@@ -111,7 +114,7 @@ export async function updateSettings(req: Request, res: Response) {
             message: "Configurações atualizadas!", 
             user: {
                 ...updatedUser,
-                notificationSettings: notificationSettings,
+                notificationSettings: dbNotificationSettings,
             } 
         });
     } catch (error) {

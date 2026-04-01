@@ -109,7 +109,7 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       await NotificationService().showNotification(
         id: 8889,
         title: 'Bebeu?',
-        body: 'Não foi possível adicionar água agora.',
+        body: 'Sinal fraco, tente novamente.',
       );
     } catch (_) {}
     debugPrint('[Widget +] ERRO no callback: $e');

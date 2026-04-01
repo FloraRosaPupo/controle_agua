@@ -122,9 +122,9 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
-  Future<void> addWater(int ml) async {
+  Future<String?> addWater(int ml) async {
     // Só aceita valores positivos
-    if (ml <= 0) return;
+    if (ml <= 0) return null;
     
     // Ação baseada somente se os dados originais já existirem na tela
     if (state is HomeLoaded) {
@@ -169,6 +169,7 @@ class HomeCubit extends Cubit<HomeState> {
         await _waterService.addWater(ml);
         // Recarregar para pegar os IDs corretos do banco (sem loading visual)
         await refreshTodayData();
+        return null; // Sucesso
       } catch (e) {
         // Se a API falhar, reverter de volta pra visão anterior
         _updateWidget(
@@ -177,9 +178,12 @@ class HomeCubit extends Cubit<HomeState> {
           currentState.dailyGoal,
         );
         emit(currentState);
-        // Opcional: Emitir um erro rapidinho ou Snackbar, precisaria ser tratado na View.
+        
+        // Retornar a mensagem de falha para a UI tratar
+        return "Sinal fraco, tente novamente.";
       }
     }
+    return null;
   }
 
   Future<void> deleteWaterLog(String id) async {
