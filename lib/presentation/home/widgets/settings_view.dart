@@ -8,6 +8,8 @@ import '../../../data/services/auth_service.dart';
 import '../cubit/settings_cubit.dart';
 import 'change_password_dialog.dart';
 import 'water_lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -331,8 +333,11 @@ class SettingsView extends StatelessWidget {
               child: Row(
                 children: [
                   ...amounts.map((amount) {
-                    final isSelected = state.quickAddAmount == amount.toDouble();
-                    final label = amount >= 1000 ? "${amount ~/ 1000}L" : "${amount}ml";
+                    final isSelected =
+                        state.quickAddAmount == amount.toDouble();
+                    final label = amount >= 1000
+                        ? "${amount ~/ 1000}L"
+                        : "${amount}ml";
                     return GestureDetector(
                       onTap: () {
                         context.read<SettingsCubit>().updateSetting(
@@ -354,13 +359,15 @@ class SettingsView extends StatelessWidget {
                           border: isSelected
                               ? null
                               : Border.all(
-                                color: colors.primary.withValues(alpha: 0.1),
-                              ),
+                                  color: colors.primary.withValues(alpha: 0.1),
+                                ),
                         ),
                         child: Text(
                           label,
                           style: TextStyle(
-                            color: isSelected ? colors.onPrimary : colors.primary,
+                            color: isSelected
+                                ? colors.onPrimary
+                                : colors.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -378,7 +385,6 @@ class SettingsView extends StatelessWidget {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -394,19 +400,49 @@ class SettingsView extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded, size: 60, color: colors.error.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.wifi_off_rounded,
+                  size: 60,
+                  color: colors.error.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
-                Text('Sem conexão ou erro de rede', style: theme.textTheme.titleMedium),
+                Text(
+                  'Sem conexão ou erro de rede',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Text(state.error!, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                  child: Text(
+                    state.error!,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () => context.read<SettingsCubit>().loadSettings(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Tentar novamente'),
+                ),
+                const SizedBox(height: 100),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.error,
+                    foregroundColor: colors.onError,
+                  ),
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
+                    await context.read<AuthService>().logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sair'),
                 ),
               ],
             ),
@@ -474,6 +510,8 @@ class SettingsView extends StatelessWidget {
               const SizedBox(height: 40),
               OutlinedButton(
                 onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
                   await context.read<AuthService>().logout();
                   if (context.mounted) {
                     context.go('/login');

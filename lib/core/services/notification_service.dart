@@ -587,6 +587,7 @@ class NotificationService {
   }
 
   static const List<String> _reminderMessages = [
+    'Bebeu água? Ta com sede?',
     'Hora de beber água! Mantenha seu corpo hidratado.',
     'Beba um copo d\'água agora! Se cuida.',
     'Não esqueça da sua meta! Um pequeno gole faz diferença.',
