@@ -321,7 +321,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
       confirmDismiss: (direction) async {
+        final int amount = log["amount"];
         await context.read<HomeCubit>().deleteWaterLog(log["id"]);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 5),
+              backgroundColor: Colors.red,
+              content: Text('$amount ml excluído', style: const TextStyle(color: Colors.white)),
+              action: SnackBarAction(
+                label: 'Desfazer',
+                textColor: Colors.white,
+                onPressed: () {
+                  context.read<HomeCubit>().addWater(amount);
+                },
+              ),
+            ),
+          );
+        }
         return false; // O cubit já remove da lista, não precisa do Dismissible remover
       },
       child: Container(

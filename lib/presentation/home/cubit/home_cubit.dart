@@ -49,7 +49,10 @@ class HomeCubit extends Cubit<HomeState> {
     final currentIntake = data.total;
     final dailyGoal = data.dailyGoal;
 
-    var todayHistory = data.logs
+    final sortedLogs = List.of(data.logs)
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final todayHistory = sortedLogs
         .map(
           (log) => {
             "id": log.id,
@@ -59,8 +62,6 @@ class HomeCubit extends Cubit<HomeState> {
           },
         )
         .toList();
-
-    todayHistory = todayHistory.reversed.toList();
 
     final progress = dailyGoal == 0
         ? 0.0

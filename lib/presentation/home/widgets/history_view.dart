@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'water_lottie.dart';
 import '../cubit/history_cubit.dart';
 import '../cubit/history_state.dart';
+import '../cubit/home_cubit.dart';
 
 class HistoryView extends StatelessWidget {
   const HistoryView({super.key});
@@ -346,7 +347,29 @@ class HistoryView extends StatelessWidget {
         child: const Icon(Icons.delete_outline, color: Colors.red),
       ),
       confirmDismiss: (direction) async {
+        final int amount = log["amount"];
         await context.read<HistoryCubit>().deleteWaterLog(log["id"]);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 5),
+              backgroundColor: Colors.red,
+              content: Text('$amount ml excluído', style: const TextStyle(color: Colors.white)),
+              action: SnackBarAction(
+                label: 'Desfazer',
+                textColor: Colors.white,
+                onPressed: () async {
+                  await context.read<HomeCubit>().addWater(amount);
+                  if (context.mounted) {
+                    context.read<HistoryCubit>().loadHistory();
+                  }
+                },
+              ),
+            ),
+          );
+        }
         return false; // O cubit já remove da lista
       },
       child: Container(
