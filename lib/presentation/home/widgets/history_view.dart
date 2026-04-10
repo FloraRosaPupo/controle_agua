@@ -25,13 +25,26 @@ class HistoryView extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded, size: 60, color: colors.error.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.wifi_off_rounded,
+                  size: 60,
+                  color: colors.error.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
-                Text('Sem conexão ou erro de rede', style: theme.textTheme.titleMedium),
+                Text(
+                  'Sem conexão ou erro de rede',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Text(state.message, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                  child: Text(
+                    state.message,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
@@ -110,7 +123,7 @@ class HistoryView extends StatelessWidget {
 
     int totalIntake = 0;
     int goalsMet = 0;
-    
+
     dailySums.forEach((dateStr, amount) {
       totalIntake += amount;
       if (amount >= state.dailyGoal) {
@@ -203,117 +216,7 @@ class HistoryView extends StatelessWidget {
     ColorScheme colors,
     HistoryLoaded state,
   ) {
-    // Agrupar logs por dia para o gráfico
-    final Map<String, int> dailySums = {};
-    final now = DateTime.now();
-    final sunday = now.subtract(Duration(days: now.weekday % 7));
-
-    for (int i = 0; i < 7; i++) {
-      final date = sunday.add(Duration(days: i));
-      final key = DateFormat('yyyy-MM-dd').format(date);
-      dailySums[key] = 0;
-    }
-
-    for (var log in state.logs) {
-      final localDate = DateTime.parse(log['date'].toString()).toLocal();
-      final dateStr = DateFormat('yyyy-MM-dd').format(localDate);
-      if (dailySums.containsKey(dateStr)) {
-        dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
-      }
-    }
-
-    final List<String> weekDays = [
-      "SEG",
-      "TER",
-      "QUA",
-      "QUI",
-      "SEX",
-      "SÁB",
-      "DOM",
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Volume de Hidratação",
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              "Meta: ${state.dailyGoal}ml",
-              style: TextStyle(
-                color: colors.primary,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 200,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: dailySums.entries.map((entry) {
-              final double progress = (entry.value / state.dailyGoal).clamp(
-                0.0,
-                1.2,
-              );
-              final dayIndex = DateTime.parse(entry.key).weekday - 1;
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    width: 30,
-                    height: 140 * progress,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: progress >= 1.0
-                            ? [
-                                colors.primary,
-                                colors.primary.withValues(alpha: 0.6),
-                              ]
-                            : [
-                                colors.onSurface.withValues(alpha: 0.1),
-                                colors.onSurface.withValues(alpha: 0.2),
-                              ],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: progress >= 1.0
-                          ? [
-                              BoxShadow(
-                                color: colors.primary.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ]
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    weekDays[dayIndex % 7],
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: colors.onSurface.withValues(alpha: 0.4),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
+    return _ChartSection(theme: theme, colors: colors, state: state);
   }
 
   Widget _buildDailyLogs(
@@ -383,14 +286,17 @@ class HistoryView extends StatelessWidget {
       confirmDismiss: (direction) async {
         final int amount = log["amount"];
         await context.read<HistoryCubit>().deleteWaterLog(log["id"]);
-        
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               duration: const Duration(seconds: 5),
               backgroundColor: Colors.red,
-              content: Text('$amount ml excluído', style: const TextStyle(color: Colors.white)),
+              content: Text(
+                '$amount ml excluído',
+                style: const TextStyle(color: Colors.white),
+              ),
               action: SnackBarAction(
                 label: 'Desfazer',
                 textColor: Colors.white,
@@ -490,6 +396,179 @@ class HistoryView extends StatelessWidget {
           fontSize: 10,
         ),
       ),
+    );
+  }
+}
+
+class _ChartSection extends StatefulWidget {
+  final ThemeData theme;
+  final ColorScheme colors;
+  final HistoryLoaded state;
+
+  const _ChartSection({
+    required this.theme,
+    required this.colors,
+    required this.state,
+  });
+
+  @override
+  State<_ChartSection> createState() => _ChartSectionState();
+}
+
+class _ChartSectionState extends State<_ChartSection> {
+  String? selectedDayKey;
+
+  @override
+  Widget build(BuildContext context) {
+    // Agrupar logs por dia para o gráfico
+    final Map<String, int> dailySums = {};
+    final now = DateTime.now();
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+
+    for (int i = 0; i < 7; i++) {
+      final date = sunday.add(Duration(days: i));
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      dailySums[key] = 0;
+    }
+
+    for (var log in widget.state.logs) {
+      final localDate = DateTime.parse(log['date'].toString()).toLocal();
+      final dateStr = DateFormat('yyyy-MM-dd').format(localDate);
+      if (dailySums.containsKey(dateStr)) {
+        dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
+      }
+    }
+
+    final List<String> weekDays = [
+      "SEG",
+      "TER",
+      "QUA",
+      "QUI",
+      "SEX",
+      "SÁB",
+      "DOM",
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Volume de Hidratação",
+              style: widget.theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              "Meta: ${widget.state.dailyGoal}ml",
+              style: TextStyle(
+                color: widget.colors.primary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 220,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: dailySums.entries.map((entry) {
+              final double progress = (entry.value / widget.state.dailyGoal)
+                  .clamp(0.0, 1.2);
+              final dayIndex = DateTime.parse(entry.key).weekday - 1;
+              final bool isSelected = selectedDayKey == entry.key;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      selectedDayKey = null;
+                    } else {
+                      selectedDayKey = entry.key;
+                    }
+                  });
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (isSelected)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.colors.primary,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "${entry.value}ml",
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: widget.colors.onPrimary,
+                          ),
+                        ),
+                      ),
+                    Container(
+                      width: 30,
+                      height: 140 * progress,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: progress >= 1.0
+                              ? [
+                                  widget.colors.primary,
+                                  widget.colors.primary.withValues(alpha: 0.6),
+                                ]
+                              : [
+                                  widget.colors.onSurface.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  widget.colors.onSurface.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: progress >= 1.0
+                            ? [
+                                BoxShadow(
+                                  color: widget.colors.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      weekDays[dayIndex % 7],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isSelected
+                            ? widget.colors.primary
+                            : widget.colors.onSurface.withValues(alpha: 0.4),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }
