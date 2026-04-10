@@ -49,17 +49,26 @@ async function history(req, res) {
     let startDate;
     let endDate;
     const { period, date } = req.query;
+    const offsetMinutes = getUserTimezoneOffsetMinutes(req);
     if (date) {
         // Date is like '2026-03-27'
-        startDate = new Date(date);
-        startDate.setUTCHours(0, 0, 0, 0);
+        const [year, month, day] = date.split('-').map(Number);
+        const localStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000);
         endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1);
     }
     else {
-        const days = 7;
-        startDate = getStartOfUserDayInUTC(req);
-        startDate.setDate(startDate.getDate() - days);
-        endDate = new Date();
+        // Fix to current week DOM - SAB
+        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000);
+        const dayOfWeek = userLocalNow.getUTCDay();
+        const localSunday = new Date(userLocalNow.getTime());
+        localSunday.setUTCDate(localSunday.getUTCDate() - dayOfWeek);
+        localSunday.setUTCHours(0, 0, 0, 0);
+        startDate = new Date(localSunday.getTime() - offsetMinutes * 60 * 1000);
+        const localSaturday = new Date(localSunday.getTime());
+        localSaturday.setUTCDate(localSaturday.getUTCDate() + 6);
+        localSaturday.setUTCHours(23, 59, 59, 999);
+        endDate = new Date(localSaturday.getTime() - offsetMinutes * 60 * 1000);
     }
     const logs = await prisma_1.prisma.waterLog.findMany({
         where: {
@@ -79,19 +88,24 @@ async function history(req, res) {
         return res.status(404).json({ error: "Usuário não encontrado" });
     }
     const dailyGoal = user.dailyGoal;
-    // Cálculo de estatísticas (ajustado para timezone)
-    // Se já ajustamos na inserção, os logs estão em "hora local".
-    // Mas startDate/endDate podem estar desalinhados se não tomarmos cuidado.
+    // Calculation adjusted for timezone
     const logsByDay = {};
     logs.forEach(log => {
-        // Se a data já foi salva com o offset (no addWater), não precisamos adicionar de novo.
-        // O log.date já representa a hora local do usuário.
-        const day = log.date.toISOString().split('T')[0];
+        const localDate = new Date(log.date.getTime() + offsetMinutes * 60 * 1000);
+        const day = localDate.toISOString().split('T')[0];
         logsByDay[day] = (logsByDay[day] || 0) + log.amount;
     });
-    const daysCount = Object.keys(logsByDay).length || 1;
     const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0);
-    const average = Math.round(totalIntake / 7);
+    // Average by days elapsed this week to be more accurate, or by 7 if the week is done
+    let daysElapsed = 7;
+    if (!date) {
+        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000);
+        daysElapsed = userLocalNow.getUTCDay() + 1;
+    }
+    else {
+        daysElapsed = 1;
+    }
+    const average = daysElapsed > 0 ? Math.round(totalIntake / daysElapsed) : 0;
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length;
     res.json({
         logs,

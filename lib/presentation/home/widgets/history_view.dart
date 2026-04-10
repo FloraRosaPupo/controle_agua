@@ -89,6 +89,38 @@ class HistoryView extends StatelessWidget {
   }
 
   Widget _buildStats(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
+    // Calcular estatísticas com base nos dias visíveis no gráfico
+    final Map<String, int> dailySums = {};
+    final now = DateTime.now();
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+
+    for (int i = 0; i < 7; i++) {
+      final date = sunday.add(Duration(days: i));
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      dailySums[key] = 0;
+    }
+
+    for (var log in state.logs) {
+      final localDate = DateTime.parse(log['date'].toString()).toLocal();
+      final dateStr = DateFormat('yyyy-MM-dd').format(localDate);
+      if (dailySums.containsKey(dateStr)) {
+        dailySums[dateStr] = (dailySums[dateStr] ?? 0) + (log['amount'] as int);
+      }
+    }
+
+    int totalIntake = 0;
+    int goalsMet = 0;
+    
+    dailySums.forEach((dateStr, amount) {
+      totalIntake += amount;
+      if (amount >= state.dailyGoal) {
+        goalsMet++;
+      }
+    });
+
+    int daysElapsed = (now.weekday % 7) + 1; // Dom = 1, Seg = 2, ..., Sab = 7
+    int average = daysElapsed > 0 ? (totalIntake / daysElapsed).round() : 0;
+
     return Row(
       children: [
         Expanded(
@@ -96,7 +128,7 @@ class HistoryView extends StatelessWidget {
             theme,
             colors,
             "MÉDIA DIÁRIA",
-            "${state.stats['average']}",
+            "$average",
             "ml",
           ),
         ),
@@ -106,7 +138,7 @@ class HistoryView extends StatelessWidget {
             theme,
             colors,
             "META BATIDA",
-            "${state.stats['goalsMet']}/${state.stats['totalDays']}",
+            "$goalsMet/7",
             "dias",
           ),
         ),
@@ -174,8 +206,10 @@ class HistoryView extends StatelessWidget {
     // Agrupar logs por dia para o gráfico
     final Map<String, int> dailySums = {};
     final now = DateTime.now();
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+
+    for (int i = 0; i < 7; i++) {
+      final date = sunday.add(Duration(days: i));
       final key = DateFormat('yyyy-MM-dd').format(date);
       dailySums[key] = 0;
     }

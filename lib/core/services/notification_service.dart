@@ -37,8 +37,8 @@ class NotificationService {
   static const String _quickAddActionId = 'quick_add_water';
   static const int _fallbackQuickAddAmountMl = 200;
   static const int _scheduledReminderIdBase = 20000;
-  static const int _progressNotificationId = 30001;
-  static const int _goalReachedNotificationId = 30002;
+  static const int _progressNotificationId = 50001;
+  static const int _goalReachedNotificationId = 50002;
 
   Future<int> Function()? _quickAddAmountResolver;
   Future<void> Function(int ml)? _onQuickAddFromNotification;
@@ -907,7 +907,8 @@ class NotificationService {
   Future<void> _cancelScheduledRemindersOnly() async {
     final pending = await _notificationsPlugin.pendingNotificationRequests();
     for (final request in pending) {
-      if (request.payload == _scheduledReminderPayload) {
+      if (request.payload == _scheduledReminderPayload ||
+          (request.id >= _scheduledReminderIdBase && request.id <= 40000)) {
         await _notificationsPlugin.cancel(id: request.id);
       }
     }
