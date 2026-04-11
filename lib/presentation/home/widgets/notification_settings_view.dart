@@ -56,7 +56,15 @@ class _NotificationSettingsViewState extends State<NotificationSettingsView> {
           if (state is NotificationLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is NotificationError) {
-            return Center(child: Text(state.message));
+            return Center(
+              child: Text(
+                'Verifique sua conexão com a internet.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            );
           } else if (state is NotificationLoaded) {
             final prefs = state.prefs;
             return SingleChildScrollView(

@@ -331,7 +331,7 @@ class _WaterGoalNotificationState extends State<WaterGoalNotification>
                           Expanded(
                             child: _QuickAddButton(
                               amount: 350,
-                              emoji: '🍶',
+                              emoji: '🥤',
                               onTap: () => widget.onAddWater?.call(350),
                               color: _progressColor,
                             ),
@@ -340,7 +340,7 @@ class _WaterGoalNotificationState extends State<WaterGoalNotification>
                           Expanded(
                             child: _QuickAddButton(
                               amount: 500,
-                              emoji: '💧',
+                              emoji: '🍶',
                               onTap: () => widget.onAddWater?.call(500),
                               color: _progressColor,
                             ),

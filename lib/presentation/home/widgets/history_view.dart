@@ -39,7 +39,7 @@ class HistoryView extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
                   child: Text(
-                    state.message,
+                    'Verifique sua conexão com a internet.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.5),
@@ -291,7 +291,9 @@ class HistoryView extends StatelessWidget {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+              duration: const Duration(seconds: 3),
               backgroundColor: Colors.red,
               content: Text(
                 '$amount ml excluído',

@@ -673,6 +673,88 @@ Caso F: “POST adiciona, mas widget não muda”
 
 ---
 
+## Stack: Banco de dados local (`sqflite`) e modo offline
+
+O app funciona mesmo sem internet: registra água offline, mostra o cache do dia e sincroniza automaticamente ao reconectar.
+
+### O que existe (e onde)
+
+- **`lib/data/services/local_database_service.dart`**: toda interação com o banco local
+- **`lib/data/services/connectivity_service.dart`**: wrapper do `connectivity_plus` para checar rede
+- **`HomeCubit`**: orquestra online/offline, optimistic update e sync
+
+### Banco local (`bebeu_offline.db`)
+
+Criado via `sqflite` com duas tabelas:
+
+| Tabela | Para que serve |
+|--------|---------------|
+| `cached_data` | Cache do dia atual (total, meta, nome) — 1 linha por data, `UNIQUE date` |
+| `pending_logs` | Fila de registros feitos offline que ainda não foram enviados à API |
+
+`LocalDatabaseService` é uma classe **estática** (singleton implícito via `static Database? _db`). Não precisa de instância — basta chamar `LocalDatabaseService.addPendingLog(200)`.
+
+### Fluxo online/offline no `HomeCubit`
+
+```
+loadTodayData()
+  ├─ sem rede → emit HomeOffline (dados do cache local)
+  └─ com rede → GET /water/today → emit HomeLoaded + cacheDailyData()
+
+addWater(ml)
+  ├─ HomeOffline → addPendingLog() + updateCachedIntake() → emit HomeOffline atualizado
+  └─ HomeLoaded  → update otimista → POST /water → refreshTodayData()
+
+reconectou (ConnectivityService.onConnectivityChanged)
+  └─ _syncAndReload()
+       ├─ emite HomeOffline(isSyncing: true)  ← banner "sincronizando"
+       ├─ para cada pending: POST /water + markLogSynced()
+       └─ loadTodayData() → emit HomeLoaded(syncedCount: N)  ← banner "N registros sincronizados"
+```
+
+### Estados do `HomeCubit` (completo)
+
+- `HomeInitial` — antes de qualquer carga
+- `HomeLoading` — carregando
+- `HomeLoaded` — online, dados da API; campo `syncedCount > 0` indica sync recém-concluído
+- `HomeOffline` — sem rede; campos `pendingCount`, `pendingAmount`, `isSyncing`
+- `HomeError` — erro sem fallback de cache
+
+### `ConnectivityService`
+
+Wrapper fino do `connectivity_plus`:
+
+- `isConnected()` → `Future<bool>` — checagem pontual (usado antes de cada request)
+- `onConnectivityChanged` → `Stream<List<ConnectivityResult>>` — subscrito no construtor do `HomeCubit` para reagir à reconexão automaticamente
+
+### Métodos de `LocalDatabaseService` (referência rápida)
+
+| Método | O que faz |
+|--------|-----------|
+| `cacheDailyData(...)` | Grava/atualiza snapshot do dia (REPLACE) |
+| `getCachedData()` | Lê o cache de hoje |
+| `updateCachedIntake(newIntake)` | Atualiza só o total (offline addWater) |
+| `addPendingLog(amount)` | Enfileira registro offline |
+| `getPendingLogs()` | Lista logs não sincronizados |
+| `markLogSynced(id)` | Marca como enviado (não apaga) |
+| `getPendingCount()` | Quantos pendentes |
+| `getPendingAmount()` | Soma dos ml pendentes |
+
+### Como usar na prática
+
+- **Adicionar água offline**: nada precisa mudar na UI — `HomeCubit.addWater(ml)` já verifica o estado e encaminha para o fluxo correto.
+- **Mostrar banner offline / sincronizando**: observe `HomeOffline.isSyncing` e `HomeLoaded.syncedCount` com `BlocConsumer`.
+- **Criar nova tabela local**: adicione `CREATE TABLE` dentro do `onCreate` de `_initDB()` e incremente a `version` do banco (adicione `onUpgrade` para migrações).
+
+### Erros comuns
+
+- **Cache vazio no primeiro uso**: `getCachedData()` retorna `null` se o usuário nunca foi online com o app. Trate com fallbacks (`?? 0`, `?? 2000`, `?? 'Usuário'`).
+- **Esquecer de marcar como sincronizado**: se `markLogSynced` não for chamado após o POST, o mesmo log vai ser reenviado na próxima sync.
+- **Não cancelar a subscription de conectividade**: o `HomeCubit` faz `_connectivitySub?.cancel()` em `close()` — qualquer Cubit que use stream precisa fazer o mesmo para não vazar memória.
+- **Migração de banco**: se mudar o schema, incremente `version` e implemente `onUpgrade` — sem isso, usuários com versão antiga travam na abertura.
+
+---
+
 ## Stack do Backend (Node.js + TypeScript)
 
 ### O que é e por que existe
@@ -885,6 +967,19 @@ Use quando:
 
 - dado é preferência local não sensível (flags de UI, onboarding, cache simples)
 
+### `sqflite` + `connectivity_plus` (offline-first)
+
+Use quando:
+
+- o app precisa funcionar sem internet (registrar dados, mostrar cache)
+- existe fila de operações pendentes para sincronizar ao reconectar
+- quer guardar snapshot local para não mostrar tela vazia em rede lenta
+
+Não use para:
+
+- dados sensíveis (use SecureStorage) ou preferências simples (use SharedPreferences)
+- histórico completo do usuário — isso vem do backend; o banco local é só cache do dia
+
 ### `flutter_local_notifications` + `timezone`
 
 Use quando:
@@ -978,6 +1073,7 @@ Se o problema for:
 - **segredo** -> SecureStorage
 - **preferência simples** -> SharedPreferences
 - **lembrete local com horário** -> Notifications + timezone
+- **cache offline + fila de sync** -> sqflite + connectivity_plus
 - **persistência e regras confiáveis** -> Backend (Express + Prisma + Postgres)
 
 ---
@@ -1042,6 +1138,11 @@ Quando alguém perguntar “como esse app funciona?”, responda:
 - **Exemplo**:
   - `SettingsCubit.loadSettings()` aplica tema vindo de `/settings` e persiste.
 
+#### Offline-first: `sqflite` + `connectivity_plus`
+- **Onde**: `lib/data/services/local_database_service.dart` e `lib/data/services/connectivity_service.dart`
+- **Exemplo**: `HomeCubit.addWater(ml)` detecta `HomeOffline` e salva em `pending_logs`; ao reconectar, `_syncAndReload()` envia os logs e emite `HomeLoaded(syncedCount: N)`.
+- **Nunca faça**: guardar JWT ou dados sensíveis no sqflite; não esquecer de cancelar a subscription de conectividade no `close()` do Cubit.
+
 #### Widget do sistema: `home_widget`
 - **Onde**:
   - Kotlin: `android/app/src/main/kotlin/...HomeWidget*Provider.kt`
@@ -1091,6 +1192,7 @@ Esta seção documenta mudanças importantes que já estão no código — útil
 | **Quick add unificado** | Notificação do widget diferente da da ação `+` do lembrete | `configureQuickAddAction` no `main` + `showProgressNotification` no `home_widget_interactive` |
 | **Produto** | Botão “Testar agora” em alertas | Removido de `notification_settings_view` e `alerts_view` |
 | **Layout widget** | Dois `+` e espaço enorme antes do botão | `home_widget_large.xml` + fundo mais translúcido em `widget_card_bg.xml` |
+| **Modo offline** | App exibia tela de erro sem rede | `sqflite` com `cached_data` + `pending_logs`; `HomeCubit` detecta rede via `ConnectivityService`, emite `HomeOffline` com cache e sincroniza ao reconectar (`_syncAndReload`) |
 
 **Debug rápido do widget**: prefixo de log `[Widget +]` em `home_widget_interactive.dart`. Se aparecer `Failed host lookup` no Dio, é rede/DNS — não é bug do botão em si.
 

@@ -61,7 +61,7 @@ class _AlertsViewState extends State<AlertsView> {
                         const SizedBox(height: 8),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                          child: Text(state.message, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                          child: Text('Verifique sua conexão com a internet.', textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(

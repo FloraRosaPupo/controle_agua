@@ -234,8 +234,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildSelectCard(theme, colors, 200, "🥛", "Copo"),
-        _buildSelectCard(theme, colors, 500, "🍶", "Garrafa"),
-        _buildSelectCard(theme, colors, 1000, "🫗", "Jarra"),
+        _buildSelectCard(theme, colors, 500, "🥤", "Garrafa"),
+        _buildSelectCard(theme, colors, 1000, "🍶", "Jarra"),
       ],
     );
   }
@@ -323,14 +323,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       confirmDismiss: (direction) async {
         final int amount = log["amount"];
         await context.read<HomeCubit>().deleteWaterLog(log["id"]);
-        
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
+              duration: const Duration(seconds: 2),
               backgroundColor: Colors.red,
-              content: Text('$amount ml excluído', style: const TextStyle(color: Colors.white)),
+              content: Text(
+                '$amount ml excluído',
+                style: const TextStyle(color: Colors.white),
+              ),
               action: SnackBarAction(
                 label: 'Desfazer',
                 textColor: Colors.white,
@@ -399,23 +404,221 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildOfflineBanner(ColorScheme colors, HomeOffline state) {
+    final isSyncing = state.isSyncing;
+    final pendingCount = state.pendingCount;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSyncing
+            ? colors.primary.withValues(alpha: 0.12)
+            : colors.onSurface.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSyncing
+              ? colors.primary.withValues(alpha: 0.3)
+              : colors.onSurface.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (isSyncing)
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.primary,
+              ),
+            )
+          else
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 16,
+              color: colors.onSurface.withValues(alpha: 0.5),
+            ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isSyncing
+                  ? 'Sincronizando $pendingCount registro${pendingCount > 1 ? 's' : ''} (+${state.pendingAmount}ml)...'
+                  : pendingCount > 0
+                  ? 'Sem conexão · $pendingCount pendente${pendingCount > 1 ? 's' : ''} (+${state.pendingAmount}ml)'
+                  : 'Sem conexão · dados podem estar desatualizados',
+              style: TextStyle(
+                fontSize: 12,
+                color: isSyncing
+                    ? colors.primary
+                    : colors.onSurface.withValues(alpha: 0.5),
+                fontWeight: isSyncing ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineContent(
+    ThemeData theme,
+    ColorScheme colors,
+    HomeOffline state,
+  ) {
+    // Cria um HomeLoaded "mocado" para reutilizar os widgets existentes
+    final mockedLoaded = HomeLoaded(
+      currentIntake: state.currentIntake,
+      dailyGoal: state.dailyGoal,
+      userName: state.userName,
+      progress: state.progress,
+      percentage: state.percentage,
+      todayHistory: const [],
+    );
+
+    return Column(
+      children: [
+        _buildOfflineBanner(colors, state),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(theme, colors, state.userName),
+                const SizedBox(height: 24),
+                // Progresso com opacidade reduzida (dados do cache)
+                Opacity(
+                  opacity: 0.55,
+                  child: _buildCircularProgress(theme, colors, mockedLoaded),
+                ),
+                const SizedBox(height: 50),
+                BlocBuilder<SettingsCubit, SettingsState>(
+                  builder: (context, settingsState) =>
+                      _buildAddButton(colors, settingsState),
+                ),
+                const SizedBox(height: 24),
+                _buildQuickSelect(theme, colors),
+                const SizedBox(height: 40),
+                // Histórico bloqueado com overlay
+                Stack(
+                  children: [
+                    Opacity(
+                      opacity: 0.3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHistoryHeader(theme, colors),
+                          const SizedBox(height: 16),
+                          // Items mocados como placeholder
+                          for (int i = 0; i < 3; i++)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: colors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: colors.onSurface.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 40),
+                          child: Text(
+                            'Histórico disponível\nquando conectado',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: colors.onSurface.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHomeContent(ThemeData theme, ColorScheme colors) {
-    return BlocBuilder<HomeCubit, HomeState>(
+    return BlocConsumer<HomeCubit, HomeState>(
+      listenWhen: (prev, curr) => curr is HomeLoaded && curr.syncedCount > 0,
+      listener: (context, state) {
+        if (state is HomeLoaded && state.syncedCount > 0) {
+          final n = state.syncedCount;
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 3),
+              backgroundColor: Colors.green.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              content: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$n registro${n > 1 ? 's' : ''} sincronizado${n > 1 ? 's' : ''} com sucesso!',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      },
       builder: (context, state) {
         if (state is HomeInitial || state is HomeLoading) {
           return const Center(child: WaterLottie(size: 120));
+        } else if (state is HomeOffline) {
+          return _buildOfflineContent(theme, colors, state);
         } else if (state is HomeError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded, size: 60, color: colors.error.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.wifi_off_rounded,
+                  size: 60,
+                  color: colors.error.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 16),
-                Text('Sem conexão ou erro de rede', style: theme.textTheme.titleMedium),
+                Text(
+                  'Sem conexão ou erro de rede',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Text(state.message, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                  child: Text(
+                    'Verifique sua conexão com a internet.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
@@ -479,7 +682,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           floatingActionButton: AddWaterButton(
             milliliters: quickAddMl,
             onPressed: () async {
-              final error = await context.read<HomeCubit>().addWater(quickAddMl);
+              final error = await context.read<HomeCubit>().addWater(
+                quickAddMl,
+              );
               if (error != null && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(error), backgroundColor: Colors.red),

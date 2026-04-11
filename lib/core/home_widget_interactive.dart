@@ -8,6 +8,8 @@ import 'api/api_client.dart';
 import 'services/widget_service.dart';
 import '../data/services/water_service.dart';
 import '../data/services/settings_service.dart';
+import '../data/services/local_database_service.dart';
+import '../data/services/connectivity_service.dart';
 import 'services/notification_service.dart';
 
 const _storage = FlutterSecureStorage(
@@ -26,47 +28,64 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
   debugPrint('[Widget +] Callback recebido | uri=$uri | host=$host | path=$path');
   if (host != 'addwater' && path != '/addwater') return;
 
+  final notify = NotificationService();
+  await notify.initialize(requestPermissions: false);
+
   try {
     await HomeWidget.setAppGroupId('group.com.example.bebeu');
-    debugPrint('[Widget +] AppGroup configurado');
 
     final token = await _storage.read(key: 'jwt_token');
     if (token == null || token.isEmpty) {
       debugPrint('[Widget +] Token ausente no secure storage');
       return;
     }
-    debugPrint('[Widget +] Token encontrado (len=${token.length})');
-
-    final client = ApiClient();
-    client.setToken(token);
-    final water = WaterService(client);
-    final settingsService = SettingsService(client);
-    final notify = NotificationService();
-    await notify.initialize(requestPermissions: false);
-    debugPrint('[Widget +] NotificationService inicializado');
 
     var quickAddAmount = 200;
     var fallbackGoal = 2000;
+
+    final isConnected = await ConnectivityService.isConnected();
+    debugPrint('[Widget +] Conectado=$isConnected');
+
+    if (!isConnected) {
+      await _saveOffline(quickAddAmount, fallbackGoal, notify);
+      return;
+    }
+
+    // Timeout curto: no contexto background o Android mata processos lentos.
+    final client = ApiClient();
+    client.setToken(token);
+    client.dio.options.connectTimeout = const Duration(seconds: 12);
+    client.dio.options.receiveTimeout = const Duration(seconds: 12);
+
+    final water = WaterService(client);
+    final settingsService = SettingsService(client);
+
     try {
       final settingsInfo = await settingsService.getSettings();
       quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ?? 200;
       fallbackGoal = (settingsInfo['dailyGoal'] as num?)?.toInt() ?? 2000;
-      debugPrint(
-        '[Widget +] Settings carregadas | quickAdd=$quickAddAmount | dailyGoal=$fallbackGoal',
-      );
+      debugPrint('[Widget +] Settings | quickAdd=$quickAddAmount | goal=$fallbackGoal');
     } catch (_) {
-      // Se falhar carregar ajustes, continua com fallback local.
-      debugPrint(
-        '[Widget +] Falha ao carregar settings, usando fallback | quickAdd=$quickAddAmount | dailyGoal=$fallbackGoal',
-      );
+      debugPrint('[Widget +] Fallback settings | quickAdd=$quickAddAmount | goal=$fallbackGoal');
     }
 
-    debugPrint('[Widget +] Enviando addWater(amount=$quickAddAmount)');
-    final added = await water.addWater(quickAddAmount);
-    if (!added) {
-      throw Exception('addWater retornou false');
+    bool added = false;
+    try {
+      debugPrint('[Widget +] Enviando addWater($quickAddAmount)');
+      added = await water.addWater(quickAddAmount);
+    } catch (e) {
+      debugPrint('[Widget +] addWater falhou: $e — salvando offline');
+      await _saveOffline(quickAddAmount, fallbackGoal, notify);
+      return;
     }
-    debugPrint('[Widget +] addWater concluido com sucesso');
+
+    if (!added) {
+      debugPrint('[Widget +] addWater retornou false — salvando offline');
+      await _saveOffline(quickAddAmount, fallbackGoal, notify);
+      return;
+    }
+
+    debugPrint('[Widget +] addWater OK');
 
     try {
       final data = await water.getTodayData();
@@ -74,45 +93,73 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       final goal = (data?.dailyGoal ?? fallbackGoal).clamp(1, 100000);
       final progress = (total / goal).clamp(0.0, 1.0);
       final percent = (progress * 100).toInt().clamp(0, 100);
-      final status = 'Você adicionou ${quickAddAmount}ml';
+
       await notify.showProgressNotification(
         id: 995,
         title: '+${quickAddAmount}ml registrado ✅',
         currentMl: total,
         goalMl: goal,
         percent: percent,
-        statusText: status,
+        statusText: 'Você adicionou ${quickAddAmount}ml',
         ongoing: false,
-      );
-      debugPrint('[Widget +] Notificacao de progresso exibida');
-      debugPrint(
-        '[Widget +] getTodayData ok | total=$total | goal=$goal | progress=${(progress * 100).toStringAsFixed(1)}%',
       );
       await WidgetService.updateHomeWidget(
         progress: progress,
         currentIntake: total,
         goal: goal,
       );
-      debugPrint('[Widget +] Widget atualizado');
+      debugPrint('[Widget +] Widget atualizado | total=$total goal=$goal');
     } catch (e) {
+      // Água foi adicionada, mas falhou ao buscar o resumo — notifica simples.
       await notify.showNotification(
         id: 8888,
-        title: 'Bebeu?',
-        body: '+ $quickAddAmount ml adicionados',
+        title: 'Bebeu? 💧',
+        body: '+${quickAddAmount}ml adicionados',
       );
-      debugPrint(
-        'Widget: água adicionada, mas falhou ao montar progresso/sincronizar UI: $e',
-      );
+      debugPrint('[Widget +] Falha ao sincronizar UI pós-add: $e');
     }
   } catch (e, st) {
     try {
-      await NotificationService().showNotification(
+      await notify.showNotification(
         id: 8889,
-        title: 'Bebeu?',
-        body: 'Sinal fraco, tente novamente.',
+        title: 'Bebeu? 💧',
+        body: 'Não foi possível registrar. Tente pelo app.',
       );
     } catch (_) {}
-    debugPrint('[Widget +] ERRO no callback: $e');
+    debugPrint('[Widget +] ERRO: $e');
     debugPrint('[Widget +] STACKTRACE: $st');
+  }
+}
+
+Future<void> _saveOffline(
+  int amount,
+  int fallbackGoal,
+  NotificationService notify,
+) async {
+  try {
+    await LocalDatabaseService.addPendingLog(amount);
+
+    final cached = await LocalDatabaseService.getCachedData();
+    final cachedIntake = cached?['total_intake'] as int? ?? 0;
+    final goal = (cached?['daily_goal'] as int? ?? fallbackGoal).clamp(1, 100000);
+    final newIntake = cachedIntake + amount;
+
+    await LocalDatabaseService.updateCachedIntake(newIntake);
+
+    final progress = (newIntake / goal).clamp(0.0, 1.0);
+    await WidgetService.updateHomeWidget(
+      progress: progress,
+      currentIntake: newIntake,
+      goal: goal,
+    );
+
+    await notify.showNotification(
+      id: 8888,
+      title: 'Bebeu? 💧',
+      body: '+${amount}ml guardado. Será sincronizado quando conectar.',
+    );
+    debugPrint('[Widget +] Offline: $amount ml salvo localmente');
+  } catch (e) {
+    debugPrint('[Widget +] Erro ao salvar offline: $e');
   }
 }
