@@ -114,16 +114,15 @@ export async function history(req: AuthRequest, res: Response) {
     })
 
     const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
-    
-    // Average by days elapsed this week to be more accurate, or by 7 if the week is done
-    let daysElapsed = 7
-    if (!date) {
-        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000)
-        daysElapsed = userLocalNow.getUTCDay() + 1
-    } else {
-        daysElapsed = 1
+
+    let totalDays = 15
+    if (date) {
+        totalDays = 1
+    } else if (period && typeof period === 'string' && period.endsWith('d')) {
+        totalDays = parseInt(period.replace('d', ''))
     }
-    const average = daysElapsed > 0 ? Math.round(totalIntake / daysElapsed) : 0
+
+    const average = totalDays > 0 ? Math.round(totalIntake / totalDays) : 0
 
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
@@ -133,7 +132,7 @@ export async function history(req: AuthRequest, res: Response) {
         stats: {
             average,
             goalsMet,
-            totalDays: 7
+            totalDays
         }
     })
 }
