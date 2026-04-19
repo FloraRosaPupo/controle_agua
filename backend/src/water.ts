@@ -41,8 +41,8 @@ export async function addWater(req: AuthRequest, res: Response) {
         await prisma.waterLog.create({
             data: {
                 amount,
-                date: date 
-                    ? new Date(new Date(date as string).getTime() - offsetMinutes * 60 * 1000) 
+                date: date
+                    ? new Date(new Date(date as string).getTime() - offsetMinutes * 60 * 1000)
                     : new Date(),
                 userId: userId!
             }
@@ -54,48 +54,69 @@ export async function addWater(req: AuthRequest, res: Response) {
     }
 }
 
+
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
-    const { period } = req.query
+    const { period, date } = req.query
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
 
-    // O usuário solicitou remover o bloqueio de semana no backend. 
-    // Retornamos os últimos 15 registros para a lista.
-    const logs = await prisma.waterLog.findMany({
+    const now = new Date()
+    let statsDays = 15
+    let startDate: Date
+    let endDate: Date = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+    if (date) {
+        const [year, month, day] = (date as string).split('-').map(Number)
+        const localStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
+        statsDays = 1
+    } else {
+        if (period && typeof period === 'string' && period.endsWith('d')) {
+            statsDays = parseInt(period.replace('d', ''))
+        }
+        startDate = new Date(now.getTime() - (statsDays + 1) * 24 * 60 * 60 * 1000)
+    }
+
+    const statsLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
+            date: { gte: startDate, lte: endDate }
         },
-        orderBy: { date: 'desc' },
-        take: 15
+        orderBy: { date: 'desc' }
     })
+
+    // Últimos 15 dias por data
+    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
+    const historyLogs = await prisma.waterLog.findMany({
+        where: {
+            userId: userId!,
+            date: { gte: fifteenDaysAgo }
+        },
+        orderBy: { date: 'desc' }
+    })
+
+    const combinedMap = new Map()
+    statsLogs.forEach(l => combinedMap.set(l.id, l))
+    historyLogs.forEach(l => combinedMap.set(l.id, l))
+    const logs = Array.from(combinedMap.values()).sort((a: any, b: any) =>
+        b.date.getTime() - a.date.getTime()
+    )
 
     const user = await prisma.user.findUnique({
         where: { id: userId! },
         select: { dailyGoal: true }
     })
+    const dailyGoal = user?.dailyGoal || 2000
 
-    if (!user) {
-        return res.status(404).json({ error: "Usuário não encontrado" })
-    }
-
-    const dailyGoal = user.dailyGoal
-
-    // Cálculo das estatísticas baseados nos logs retornados
     const logsByDay: { [key: string]: number } = {}
-    logs.forEach(log => {
+    statsLogs.forEach(log => {
         const localDate = new Date(log.date.getTime() + offsetMinutes * 60 * 1000)
         const day = localDate.toISOString().split('T')[0]
         logsByDay[day] = (logsByDay[day] || 0) + log.amount
     })
 
-    const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
-    
-    // Período para a média (default 15 dias)
-    let statsDays = 15
-    if (period && typeof period === 'string' && period.endsWith('d')) {
-        statsDays = parseInt(period.replace('d', ''))
-    }
-
+    const totalIntake = statsLogs.reduce((acc, log) => acc + log.amount, 0)
     const average = statsDays > 0 ? Math.round(totalIntake / statsDays) : 0
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
