@@ -53,8 +53,6 @@ export async function addWater(req: AuthRequest, res: Response) {
         res.status(500).json({ error: "Erro ao salvar registro de água" })
     }
 }
-
-
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
     const { period, date } = req.query
@@ -75,7 +73,7 @@ export async function history(req: AuthRequest, res: Response) {
         if (period && typeof period === 'string' && period.endsWith('d')) {
             statsDays = parseInt(period.replace('d', ''))
         }
-        startDate = new Date(now.getTime() - (statsDays + 1) * 24 * 60 * 60 * 1000)
+        startDate = new Date(now.getTime() - statsDays * 24 * 60 * 60 * 1000)
     }
 
     const statsLogs = await prisma.waterLog.findMany({
@@ -86,7 +84,6 @@ export async function history(req: AuthRequest, res: Response) {
         orderBy: { date: 'desc' }
     })
 
-    // Últimos 15 dias por data
     const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
     const historyLogs = await prisma.waterLog.findMany({
         where: {
@@ -117,7 +114,8 @@ export async function history(req: AuthRequest, res: Response) {
     })
 
     const totalIntake = statsLogs.reduce((acc, log) => acc + log.amount, 0)
-    const average = statsDays > 0 ? Math.round(totalIntake / statsDays) : 0
+    const daysWithLogs = Object.keys(logsByDay).length
+    const average = daysWithLogs > 0 ? Math.round(totalIntake / daysWithLogs) : 0
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
     res.json({
