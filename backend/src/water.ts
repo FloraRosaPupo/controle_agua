@@ -28,18 +28,22 @@ function getEndOfUserDayInUTC(req: AuthRequest): Date {
 }
 
 export async function addWater(req: AuthRequest, res: Response) {
-    const { amount } = req.body
+    const { amount, date } = req.body
     const userId = req.userId
 
     if (typeof amount !== 'number' || amount <= 0) {
         return res.status(400).json({ error: "Quantidade deve ser maior que zero" })
     }
 
+    const offsetMinutes = getUserTimezoneOffsetMinutes(req)
+
     try {
         await prisma.waterLog.create({
             data: {
                 amount,
-                date: new Date(),  // Sempre salva em UTC puro
+                date: date 
+                    ? new Date(new Date(date as string).getTime() - offsetMinutes * 60 * 1000) 
+                    : new Date(),
                 userId: userId!
             }
         })
@@ -68,30 +72,15 @@ export async function history(req: AuthRequest, res: Response) {
         endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
     } else if (period && typeof period === 'string' && period.endsWith('d')) {
         const days = parseInt(period.replace('d', ''))
-        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000)
-        
-        const localEnd = new Date(userLocalNow.getTime())
-        localEnd.setUTCHours(23, 59, 59, 999)
-        endDate = new Date(localEnd.getTime() - offsetMinutes * 60 * 1000)
-
-        const localStart = new Date(localEnd.getTime())
-        localStart.setUTCDate(localStart.getUTCDate() - (days - 1))
-        localStart.setUTCHours(0, 0, 0, 0)
-        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
+        const now = new Date()
+        // Be generous: load days + 1 extra day to avoid timezone clipping
+        startDate = new Date(now.getTime() - (days + 1) * 24 * 60 * 60 * 1000)
+        endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // End of tomorrow to be safe
     } else {
-        // Default to last 30 days instead of just current week
-        // This ensures the list has enough data even if period is not sent
-        const days = 30;
-        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000)
-        
-        const localEnd = new Date(userLocalNow.getTime())
-        localEnd.setUTCHours(23, 59, 59, 999)
-        endDate = new Date(localEnd.getTime() - offsetMinutes * 60 * 1000)
-
-        const localStart = new Date(localEnd.getTime())
-        localStart.setUTCDate(localStart.getUTCDate() - (days - 1))
-        localStart.setUTCHours(0, 0, 0, 0)
-        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
+        const days = 30
+        const now = new Date()
+        startDate = new Date(now.getTime() - (days + 1) * 24 * 60 * 60 * 1000)
+        endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     }
 
     const logs = await prisma.waterLog.findMany({
