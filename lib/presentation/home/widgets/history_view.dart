@@ -102,13 +102,16 @@ class HistoryView extends StatelessWidget {
   }
 
   Widget _buildStats(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
-    // Calcular estatísticas com base nos dias visíveis no gráfico (semana atual)
-    final Map<String, int> dailySums = {};
+    final int totalDays = int.tryParse(
+          state.selectedPeriod.replaceAll('d', ''),
+        ) ??
+        15;
     final now = DateTime.now();
-    final sunday = now.subtract(Duration(days: now.weekday % 7));
 
-    for (int i = 0; i < 7; i++) {
-      final date = sunday.add(Duration(days: i));
+    // Agrupa os logs pelos últimos N dias (mesmo período da lista)
+    final Map<String, int> dailySums = {};
+    for (int i = 0; i < totalDays; i++) {
+      final date = DateTime(now.year, now.month, now.day - i);
       final key = DateFormat('yyyy-MM-dd').format(date);
       dailySums[key] = 0;
     }
@@ -124,15 +127,14 @@ class HistoryView extends StatelessWidget {
     int totalIntake = 0;
     int goalsMet = 0;
 
-    dailySums.forEach((dateStr, amount) {
+    dailySums.forEach((_, amount) {
       totalIntake += amount;
       if (amount >= state.dailyGoal) {
         goalsMet++;
       }
     });
 
-    int daysElapsed = (now.weekday % 7) + 1; // Dom = 1, Seg = 2, ..., Sab = 7
-    int average = daysElapsed > 0 ? (totalIntake / daysElapsed).round() : 0;
+    final int average = totalDays > 0 ? (totalIntake / totalDays).round() : 0;
 
     return Row(
       children: [
@@ -151,7 +153,7 @@ class HistoryView extends StatelessWidget {
             theme,
             colors,
             "META BATIDA",
-            "$goalsMet/7",
+            "$goalsMet/$totalDays",
             "dias",
           ),
         ),
@@ -282,8 +284,7 @@ class HistoryView extends StatelessWidget {
           return _buildHistoryItem(context, theme, colors, {
             "id": log['id'],
             "type": "Água",
-            "time":
-                "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
+            "time": "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
             "amount": log['amount'],
           });
         }),
@@ -594,6 +595,7 @@ class _ManualAddDialog extends StatefulWidget {
 
 class _ManualAddDialogState extends State<_ManualAddDialog> {
   late DateTime selectedDate;
+  late TimeOfDay selectedTime;
   final TextEditingController _amountController = TextEditingController(
     text: '200',
   );
@@ -601,7 +603,9 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
   @override
   void initState() {
     super.initState();
-    selectedDate = DateTime.now();
+    final now = DateTime.now();
+    selectedDate = now;
+    selectedTime = TimeOfDay.fromDateTime(now);
   }
 
   @override
@@ -620,6 +624,18 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: selectedTime,
+    );
+    if (picked != null && picked != selectedTime) {
+      setState(() {
+        selectedTime = picked;
       });
     }
   }
@@ -645,43 +661,100 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              "DATA",
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.5),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () => _selectDate(context),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: colors.onSurface.withValues(alpha: 0.1),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "DATA",
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.onSurface.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => _selectDate(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: colors.onSurface.withValues(alpha: 0.1),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 16,
+                                color: colors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat('dd/MM/yy').format(selectedDate),
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      DateFormat('dd/MM/yyyy').format(selectedDate),
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "HORÁRIO",
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.onSurface.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => _selectTime(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: colors.onSurface.withValues(alpha: 0.1),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 16,
+                                color: colors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                selectedTime.format(context),
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 24),
             Text(
@@ -735,7 +808,14 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
                     onPressed: () {
                       final amount = int.tryParse(_amountController.text) ?? 0;
                       if (amount > 0) {
-                        widget.onConfirm(amount, selectedDate);
+                        final fullDateTime = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+                        widget.onConfirm(amount, fullDateTime);
                         Navigator.pop(context);
                       }
                     },

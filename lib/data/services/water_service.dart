@@ -38,7 +38,7 @@ class WaterService {
   Future<bool> addWaterManual(int amount, DateTime date) async {
     try {
       final response = await _apiClient.dio.post(
-        '/water/manual',
+        '/water',
         data: {
           'amount': amount,
           'date': date.toIso8601String(),
