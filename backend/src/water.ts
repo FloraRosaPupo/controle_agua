@@ -59,22 +59,60 @@ export async function history(req: AuthRequest, res: Response) {
     const { period, date } = req.query
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
 
-    let days = 15
+    const now = new Date()
+    let startDate: Date
+    let endDate: Date
+    let statsDays: number
+
     if (date) {
-        days = 1
-    } else if (period && typeof period === 'string' && period.endsWith('d')) {
-        days = parseInt(period.replace('d', ''))
+        // Dia específico
+        const [year, month, day] = (date as string).split('-').map(Number)
+        const localStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
+        statsDays = 1
+    } else {
+        // "Bloqueio semana por semana" (Domingo a Sábado) conforme sugerido pelo usuário
+        const startOfToday = getStartOfUserDayInUTC(req)
+        const dayOfWeek = startOfToday.getUTCDay() // 0 = Domingo, 1 = Segunda, ...
+        
+        // Início da semana (Domingo)
+        startDate = new Date(startOfToday.getTime() - dayOfWeek * 24 * 60 * 60 * 1000)
+        // Fim da semana (Sábado)
+        endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000 - 1)
+        statsDays = 7
+
+        // Se houver um período específico tipo '15d', sobrepomos a regra da semana
+        if (period && typeof period === 'string' && period.endsWith('d')) {
+            statsDays = parseInt(period.replace('d', ''))
+            startDate = new Date(now.getTime() - (statsDays + 1) * 24 * 60 * 60 * 1000)
+            endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        }
     }
 
-    // Buscamos os últimos 15 registros conforme solicitado pelo usuário
-    // Independemente do período, retornamos os 15 mais recentes para a lista
-    const logs = await prisma.waterLog.findMany({
+    // Logs para o gráfico e estatísticas (respeita o bloqueio da semana ou período)
+    const statsLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
+            date: { gte: startDate, lte: endDate }
         },
-        orderBy: { date: 'desc' },
-        take: 15 // Garante os últimos 15 registros
+        orderBy: { date: 'desc' }
     })
+
+    // Logs para o histórico da lista (sempre os últimos 15, independente de semana)
+    const historyLogs = await prisma.waterLog.findMany({
+        where: { userId: userId! },
+        orderBy: { date: 'desc' },
+        take: 15
+    })
+
+    // Unimos os logs para que o gráfico tenha dados da semana e a lista tenha o histórico
+    const combinedMap = new Map()
+    statsLogs.forEach(l => combinedMap.set(l.id, l))
+    historyLogs.forEach(l => combinedMap.set(l.id, l))
+    const logs = Array.from(combinedMap.values()).sort((a: any, b: any) => 
+        b.date.getTime() - a.date.getTime()
+    )
 
     const user = await prisma.user.findUnique({
         where: { id: userId! },
@@ -87,21 +125,16 @@ export async function history(req: AuthRequest, res: Response) {
 
     const dailyGoal = user.dailyGoal
 
-    // Cálculo das estatísticas baseados nos logs retornados (últimos 15)
+    // Cálculo das estatísticas baseados apenas nos logs do período/semana (statsLogs)
     const logsByDay: { [key: string]: number } = {}
-    logs.forEach(log => {
+    statsLogs.forEach(log => {
         const localDate = new Date(log.date.getTime() + offsetMinutes * 60 * 1000)
         const day = localDate.toISOString().split('T')[0]
         logsByDay[day] = (logsByDay[day] || 0) + log.amount
     })
 
-    const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
-    
-    // Se o usuário pediu um período específico, usamos ele para a média, 
-    // caso contrário usamos 15 como padrão (já que retornamos 15 registros)
-    const totalDays = days
-
-    const average = totalDays > 0 ? Math.round(totalIntake / totalDays) : 0
+    const totalIntake = statsLogs.reduce((acc, log) => acc + log.amount, 0)
+    const average = statsDays > 0 ? Math.round(totalIntake / statsDays) : 0
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
     res.json({
@@ -110,7 +143,7 @@ export async function history(req: AuthRequest, res: Response) {
         stats: {
             average,
             goalsMet,
-            totalDays
+            totalDays: statsDays
         }
     })
 }
