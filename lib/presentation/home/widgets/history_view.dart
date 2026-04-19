@@ -102,7 +102,7 @@ class HistoryView extends StatelessWidget {
   }
 
   Widget _buildStats(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
-    // Calcular estatísticas com base nos dias visíveis no gráfico
+    // Calcular estatísticas com base nos dias visíveis no gráfico (semana atual)
     final Map<String, int> dailySums = {};
     final now = DateTime.now();
     final sunday = now.subtract(Duration(days: now.weekday % 7));
@@ -219,6 +219,27 @@ class HistoryView extends StatelessWidget {
     return _ChartSection(theme: theme, colors: colors, state: state);
   }
 
+  Widget _buildDailyLogsHeader(
+    ThemeData theme,
+    ColorScheme colors,
+    HistoryLoaded state,
+  ) {
+    return Row(
+      children: [
+        Icon(Icons.history_rounded, color: colors.primary, size: 20),
+        const SizedBox(width: 8),
+        Text(
+          "ÚLTIMOS ${state.selectedPeriod.replaceAll('d', '').toUpperCase()} DIAS",
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: colors.primary,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDailyLogs(
     BuildContext context,
     ThemeData theme,
@@ -229,25 +250,31 @@ class HistoryView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.history, size: 16, color: colors.primary),
-            const SizedBox(width: 8),
-            Text(
-              "ÚLTIMOS REGISTROS",
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+            _buildDailyLogsHeader(theme, colors, state),
+            IconButton(
+              onPressed: () => _showManualAddModal(context, state),
+              icon: const Icon(Icons.add_rounded),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary.withValues(alpha: 0.1),
+                foregroundColor: colors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
         if (state.logs.isEmpty)
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text("Nenhum registro encontrado no período."),
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                "Nenhum registro encontrado nos últimos ${state.selectedPeriod.replaceAll('d', '')} dias.",
+              ),
             ),
           ),
         ...state.logs.map((log) {
@@ -270,100 +297,55 @@ class HistoryView extends StatelessWidget {
     ColorScheme colors,
     Map<String, dynamic> log,
   ) {
-    return Dismissible(
-      key: Key(log["id"].toString()),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.delete_outline, color: Colors.red),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
       ),
-      confirmDismiss: (direction) async {
-        final int amount = log["amount"];
-        await context.read<HistoryCubit>().deleteWaterLog(log["id"]);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
-              duration: const Duration(seconds: 3),
-              backgroundColor: Colors.red,
-              content: Text(
-                '$amount ml excluído',
-                style: const TextStyle(color: Colors.white),
-              ),
-              action: SnackBarAction(
-                label: 'Desfazer',
-                textColor: Colors.white,
-                onPressed: () async {
-                  await context.read<HomeCubit>().addWater(amount);
-                  if (context.mounted) {
-                    context.read<HistoryCubit>().loadHistory();
-                  }
-                },
-              ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
             ),
-          );
-        }
-        return false; // O cubit já remove da lista
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.onSurface.withValues(alpha: 0.05)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.local_drink_outlined,
-                color: colors.primary,
-                size: 24,
-              ),
+            child: Icon(
+              Icons.local_drink_outlined,
+              color: colors.primary,
+              size: 24,
             ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  log["type"],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                log["type"],
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  log["time"],
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onSurface.withValues(alpha: 0.4),
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                log["time"],
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurface.withValues(alpha: 0.4),
                 ),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              "+${log["amount"]}ml",
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            "+${log["amount"]}ml",
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+        ],
       ),
     );
   }
@@ -400,6 +382,32 @@ class HistoryView extends StatelessWidget {
       ),
     );
   }
+
+  void _showManualAddModal(BuildContext context, HistoryLoaded state) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _ManualAddDialog(
+        onConfirm: (amount, date) async {
+          // Feedback visual imediato
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Adicionando ${amount}ml..."),
+              duration: const Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          await context.read<HistoryCubit>().addWaterManual(amount, date);
+
+          final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final selectedDate = DateFormat('yyyy-MM-dd').format(date);
+          if (today == selectedDate && context.mounted) {
+            context.read<HomeCubit>().refreshTodayData();
+          }
+        },
+      ),
+    );
+  }
 }
 
 class _ChartSection extends StatefulWidget {
@@ -422,7 +430,7 @@ class _ChartSectionState extends State<_ChartSection> {
 
   @override
   Widget build(BuildContext context) {
-    // Agrupar logs por dia para o gráfico
+    // Agrupar logs por dia para o gráfico (semana atual)
     final Map<String, int> dailySums = {};
     final now = DateTime.now();
     final sunday = now.subtract(Duration(days: now.weekday % 7));
@@ -571,6 +579,185 @@ class _ChartSectionState extends State<_ChartSection> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ManualAddDialog extends StatefulWidget {
+  final Function(int amount, DateTime date) onConfirm;
+
+  const _ManualAddDialog({required this.onConfirm});
+
+  @override
+  State<_ManualAddDialog> createState() => _ManualAddDialogState();
+}
+
+class _ManualAddDialogState extends State<_ManualAddDialog> {
+  late DateTime selectedDate;
+  final TextEditingController _amountController = TextEditingController(
+    text: '200',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Adicionar Registro",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "DATA",
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.5),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => _selectDate(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: colors.onSurface.withValues(alpha: 0.1),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 18,
+                      color: colors.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      DateFormat('dd/MM/yyyy').format(selectedDate),
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "QUANTIDADE (ML)",
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.5),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colors.primary,
+              ),
+              decoration: InputDecoration(
+                suffixText: "ml",
+                hintText: "0",
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: colors.onSurface.withValues(alpha: 0.1),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: colors.onSurface.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancelar"),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final amount = int.tryParse(_amountController.text) ?? 0;
+                      if (amount > 0) {
+                        widget.onConfirm(amount, selectedDate);
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Confirmar",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -34,7 +34,24 @@ class WaterService {
       );
     }
   }
-  Future<Map<String, dynamic>?> getHistory({String period = '7d', String? date}) async {
+
+  Future<bool> addWaterManual(int amount, DateTime date) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/water/manual',
+        data: {
+          'amount': amount,
+          'date': date.toIso8601String(),
+        },
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } on DioException catch (e) {
+      throw Exception(
+        'Erro ao adicionar registro manual: ${e.response?.data['error'] ?? e.message}',
+      );
+    }
+  }
+  Future<Map<String, dynamic>?> getHistory({String period = '15d', String? date}) async {
     try {
       final response = await _apiClient.dio.get(
         '/water/history',

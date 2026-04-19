@@ -66,22 +66,32 @@ export async function history(req: AuthRequest, res: Response) {
         startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
         
         endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
-    } else {
-        // Fix to current week DOM - SAB
+    } else if (period && typeof period === 'string' && period.endsWith('d')) {
+        const days = parseInt(period.replace('d', ''))
         const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000)
-        const dayOfWeek = userLocalNow.getUTCDay()
         
-        const localSunday = new Date(userLocalNow.getTime())
-        localSunday.setUTCDate(localSunday.getUTCDate() - dayOfWeek)
-        localSunday.setUTCHours(0, 0, 0, 0)
+        const localEnd = new Date(userLocalNow.getTime())
+        localEnd.setUTCHours(23, 59, 59, 999)
+        endDate = new Date(localEnd.getTime() - offsetMinutes * 60 * 1000)
 
-        startDate = new Date(localSunday.getTime() - offsetMinutes * 60 * 1000)
+        const localStart = new Date(localEnd.getTime())
+        localStart.setUTCDate(localStart.getUTCDate() - (days - 1))
+        localStart.setUTCHours(0, 0, 0, 0)
+        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
+    } else {
+        // Default to last 30 days instead of just current week
+        // This ensures the list has enough data even if period is not sent
+        const days = 30;
+        const userLocalNow = new Date(Date.now() + offsetMinutes * 60 * 1000)
         
-        const localSaturday = new Date(localSunday.getTime())
-        localSaturday.setUTCDate(localSaturday.getUTCDate() + 6)
-        localSaturday.setUTCHours(23, 59, 59, 999)
+        const localEnd = new Date(userLocalNow.getTime())
+        localEnd.setUTCHours(23, 59, 59, 999)
+        endDate = new Date(localEnd.getTime() - offsetMinutes * 60 * 1000)
 
-        endDate = new Date(localSaturday.getTime() - offsetMinutes * 60 * 1000)
+        const localStart = new Date(localEnd.getTime())
+        localStart.setUTCDate(localStart.getUTCDate() - (days - 1))
+        localStart.setUTCHours(0, 0, 0, 0)
+        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
     }
 
     const logs = await prisma.waterLog.findMany({

@@ -608,15 +608,19 @@ class NotificationService {
     'Água na rotina: simples, leve e essencial.',
     'Siga no ritmo da hidratação e bata sua meta.',
     'Não deixe para depois: um gole agora já ajuda.',
+    'Água gelada ou natural? O importante é beber agora!',
+    'Seu corpo pede: mais um gole de água para o dia brilhar.',
+    'Lembrete do dia: hidrate-se e sinta a energia voltar.',
+    'Meta de água quase lá! Vamos com mais um copinho?',
+    'Cuidado com você: hora de recarregar com água fresca.',
+    'Beba água e transforme o dia em algo incrível.',
+    'Pequena vitória: um gole de água a cada lembrete.',
+    'Hidratação full: seu superpoder para o dia todo.',
+    'Não para! Água agora e meta batida no final do dia.',
+    'Você consegue: mais água para um corpo forte e feliz.',
   ];
-  int _reminderProgressMessageIndex = 0;
-
   String _nextReminderMessage() {
-    final message =
-        _reminderMessages[_reminderProgressMessageIndex %
-            _reminderMessages.length];
-    _reminderProgressMessageIndex++;
-    return message;
+    return _reminderMessages[math.Random().nextInt(_reminderMessages.length)];
   }
 
   Future<void> _scheduleHydrationRemindersImpl(
@@ -680,13 +684,10 @@ class NotificationService {
         stepMinutes: stepMinutes,
         maxMarks: maxAlarms,
       );
-      int messageIndex = 0;
       for (final total in marks) {
         final hour = total ~/ 60;
         final minute = total % 60;
-        final message =
-            _reminderMessages[messageIndex % _reminderMessages.length];
-        messageIndex++;
+        final message = _nextReminderMessage();
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
           id: _scheduledReminderIdBase + total,
@@ -733,13 +734,10 @@ class NotificationService {
         endTotalMinutes: endTotalMinutes,
         stepMinutes: stepMinutes,
       );
-      int messageIndex = 0;
       for (final s in slots) {
         final hour = s.totalMinutes ~/ 60;
         final minute = s.totalMinutes % 60;
-        final message =
-            _reminderMessages[messageIndex % _reminderMessages.length];
-        messageIndex++;
+        final message = _nextReminderMessage();
         scheduledCount++;
         await _notificationsPlugin.zonedSchedule(
           id: _scheduledReminderIdBase + (s.weekday * 1440 + s.totalMinutes),
