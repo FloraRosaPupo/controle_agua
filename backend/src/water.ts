@@ -56,42 +56,24 @@ export async function addWater(req: AuthRequest, res: Response) {
 
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
-    let startDate: Date
-    let endDate: Date
     const { period, date } = req.query
-
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
 
+    let days = 15
     if (date) {
-        // Date is like '2026-03-27'
-        const [year, month, day] = (date as string).split('-').map(Number)
-        
-        const localStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
-        startDate = new Date(localStart.getTime() - offsetMinutes * 60 * 1000)
-        
-        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000 - 1)
+        days = 1
     } else if (period && typeof period === 'string' && period.endsWith('d')) {
-        const days = parseInt(period.replace('d', ''))
-        const now = new Date()
-        // Be generous: load days + 1 extra day to avoid timezone clipping
-        startDate = new Date(now.getTime() - (days + 1) * 24 * 60 * 60 * 1000)
-        endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // End of tomorrow to be safe
-    } else {
-        const days = 30
-        const now = new Date()
-        startDate = new Date(now.getTime() - (days + 1) * 24 * 60 * 60 * 1000)
-        endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        days = parseInt(period.replace('d', ''))
     }
 
+    // Buscamos os últimos 15 registros conforme solicitado pelo usuário
+    // Independemente do período, retornamos os 15 mais recentes para a lista
     const logs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
-            date: {
-                gte: startDate,
-                lte: endDate
-            }
         },
-        orderBy: { date: 'desc' }
+        orderBy: { date: 'desc' },
+        take: 15 // Garante os últimos 15 registros
     })
 
     const user = await prisma.user.findUnique({
@@ -105,7 +87,7 @@ export async function history(req: AuthRequest, res: Response) {
 
     const dailyGoal = user.dailyGoal
 
-    // Calculation adjusted for timezone
+    // Cálculo das estatísticas baseados nos logs retornados (últimos 15)
     const logsByDay: { [key: string]: number } = {}
     logs.forEach(log => {
         const localDate = new Date(log.date.getTime() + offsetMinutes * 60 * 1000)
@@ -114,16 +96,12 @@ export async function history(req: AuthRequest, res: Response) {
     })
 
     const totalIntake = logs.reduce((acc, log) => acc + log.amount, 0)
-
-    let totalDays = 15
-    if (date) {
-        totalDays = 1
-    } else if (period && typeof period === 'string' && period.endsWith('d')) {
-        totalDays = parseInt(period.replace('d', ''))
-    }
+    
+    // Se o usuário pediu um período específico, usamos ele para a média, 
+    // caso contrário usamos 15 como padrão (já que retornamos 15 registros)
+    const totalDays = days
 
     const average = totalDays > 0 ? Math.round(totalIntake / totalDays) : 0
-
     const goalsMet = Object.values(logsByDay).filter(amount => amount >= dailyGoal).length
 
     res.json({
