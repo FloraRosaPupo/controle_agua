@@ -52,12 +52,6 @@ export async function history(req: AuthRequest, res: Response) {
     const { period, date } = req.query
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
 
-    console.log('=== HISTORY DEBUG ===')
-    console.log('offsetMinutes:', offsetMinutes)
-    console.log('period:', period)
-    console.log('date:', date)
-    console.log('userId:', userId)
-
     const now = new Date()
     let statsDays = 15
     let startDate: Date
@@ -76,11 +70,6 @@ export async function history(req: AuthRequest, res: Response) {
         startDate = new Date(now.getTime() - statsDays * 24 * 60 * 60 * 1000)
     }
 
-    console.log('now:', now)
-    console.log('startDate:', startDate)
-    console.log('endDate:', endDate)
-    console.log('statsDays:', statsDays)
-
     const statsLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
@@ -91,8 +80,6 @@ export async function history(req: AuthRequest, res: Response) {
 
     const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
 
-    console.log('fifteenDaysAgo:', fifteenDaysAgo)
-
     const historyLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
@@ -100,9 +87,6 @@ export async function history(req: AuthRequest, res: Response) {
         },
         orderBy: { date: 'desc' }
     })
-
-    console.log('statsLogs count:', statsLogs.length)
-    console.log('historyLogs count:', historyLogs.length)
 
     const combinedMap = new Map()
     statsLogs.forEach(l => combinedMap.set(l.id, l))
