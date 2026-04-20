@@ -1,5 +1,4 @@
 import { prisma } from "./prisma"
-// Trigger deploy
 import { Response } from "express"
 import { AuthRequest } from "./types"
 
@@ -9,17 +8,10 @@ function getUserTimezoneOffsetMinutes(req: AuthRequest): number {
 }
 
 function getStartOfUserDayInUTC(req: AuthRequest): Date {
-    // x-timezone-offset vem do app como local - UTC (ex.: Brasil = -180)
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
-
     const now = new Date()
-    // Converte para "relógio local do usuário" em um objeto Date UTC
     const userLocalNow = new Date(now.getTime() + (offsetMinutes * 60 * 1000))
-
-    // Define meia-noite local do usuário
     userLocalNow.setUTCHours(0, 0, 0, 0)
-
-    // Converte de volta para UTC real para filtrar no banco
     return new Date(userLocalNow.getTime() - (offsetMinutes * 60 * 1000))
 }
 
@@ -54,10 +46,17 @@ export async function addWater(req: AuthRequest, res: Response) {
         res.status(500).json({ error: "Erro ao salvar registro de água" })
     }
 }
+
 export async function history(req: AuthRequest, res: Response) {
     const userId = req.userId
     const { period, date } = req.query
     const offsetMinutes = getUserTimezoneOffsetMinutes(req)
+
+    console.log('=== HISTORY DEBUG ===')
+    console.log('offsetMinutes:', offsetMinutes)
+    console.log('period:', period)
+    console.log('date:', date)
+    console.log('userId:', userId)
 
     const now = new Date()
     let statsDays = 15
@@ -77,6 +76,11 @@ export async function history(req: AuthRequest, res: Response) {
         startDate = new Date(now.getTime() - statsDays * 24 * 60 * 60 * 1000)
     }
 
+    console.log('now:', now)
+    console.log('startDate:', startDate)
+    console.log('endDate:', endDate)
+    console.log('statsDays:', statsDays)
+
     const statsLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
@@ -86,6 +90,9 @@ export async function history(req: AuthRequest, res: Response) {
     })
 
     const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
+
+    console.log('fifteenDaysAgo:', fifteenDaysAgo)
+
     const historyLogs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
@@ -93,6 +100,9 @@ export async function history(req: AuthRequest, res: Response) {
         },
         orderBy: { date: 'desc' }
     })
+
+    console.log('statsLogs count:', statsLogs.length)
+    console.log('historyLogs count:', historyLogs.length)
 
     const combinedMap = new Map()
     statsLogs.forEach(l => combinedMap.set(l.id, l))
@@ -149,7 +159,6 @@ export async function today(req: AuthRequest, res: Response) {
 
     const total = logs.reduce((acc, log) => acc + log.amount, 0)
 
-    // Buscamos o usuário para saber a meta diária dele
     const user = await prisma.user.findUnique({
         where: { id: userId! },
         select: { dailyGoal: true, name: true }
@@ -198,4 +207,3 @@ export async function deleteWater(req: AuthRequest, res: Response) {
         res.status(500).json({ error: "Erro ao excluir registro" })
     }
 }
-
