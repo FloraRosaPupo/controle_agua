@@ -425,33 +425,7 @@ class HistoryView extends StatelessWidget {
     return names[date.weekday - 1];
   }
 
-  Widget _buildWeekRange(ThemeData theme, ColorScheme colors) {
-    final now = DateTime.now();
-    // Calcula domingo anterior (ou hoje se for domingo)
-    final sunday = now.subtract(Duration(days: now.weekday % 7));
-    final saturday = sunday.add(const Duration(days: 6));
 
-    final startStr =
-        "${_getShortDayName(sunday)} ${sunday.day.toString().padLeft(2, '0')}/${sunday.month.toString().padLeft(2, '0')}";
-    final endStr =
-        "${_getShortDayName(saturday)} ${saturday.day.toString().padLeft(2, '0')}/${saturday.month.toString().padLeft(2, '0')}";
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        "$startStr - $endStr",
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: colors.onSurface.withValues(alpha: 0.6),
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
 
   void _showManualAddModal(BuildContext context, HistoryLoaded state) {
     showDialog(
@@ -654,7 +628,6 @@ class _ChartSectionState extends State<_ChartSection> {
         ),
       ],
     );
-  }
   }
 }
 
