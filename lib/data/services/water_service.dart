@@ -41,7 +41,7 @@ class WaterService {
         '/water',
         data: {
           'amount': amount,
-          'date': date.toIso8601String(),
+          'date': date.toUtc().toIso8601String(),
         },
       );
       return response.statusCode == 200 || response.statusCode == 201;

@@ -101,17 +101,43 @@ class HistoryView extends StatelessWidget {
     );
   }
 
-  Widget _buildStats(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
-    final int totalDays = int.tryParse(
-          state.selectedPeriod.replaceAll('d', ''),
-        ) ??
-        15;
+  Widget _buildWeekRange(ThemeData theme, ColorScheme colors) {
     final now = DateTime.now();
+    // Calcula domingo anterior (ou hoje se for domingo)
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+    final saturday = sunday.add(const Duration(days: 6));
 
-    // Agrupa os logs pelos últimos N dias (mesmo período da lista)
+    final startStr =
+        "${_getShortDayName(sunday)} ${sunday.day.toString().padLeft(2, '0')}/${sunday.month.toString().padLeft(2, '0')}";
+    final endStr =
+        "${_getShortDayName(saturday)} ${saturday.day.toString().padLeft(2, '0')}/${saturday.month.toString().padLeft(2, '0')}";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        "$startStr - $endStr",
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: colors.onSurface.withValues(alpha: 0.6),
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStats(ThemeData theme, ColorScheme colors, HistoryLoaded state) {
+    const int totalDays = 7; // Sempre semana para estatística
+    final now = DateTime.now();
+    final sunday = now.subtract(Duration(days: now.weekday % 7));
+
+    // Agrupa os logs pelos dias da semana atual
     final Map<String, int> dailySums = {};
     for (int i = 0; i < totalDays; i++) {
-      final date = DateTime(now.year, now.month, now.day - i);
+      final date = sunday.add(Duration(days: i));
       final key = DateFormat('yyyy-MM-dd').format(date);
       dailySums[key] = 0;
     }
@@ -248,6 +274,19 @@ class HistoryView extends StatelessWidget {
     ColorScheme colors,
     HistoryLoaded state,
   ) {
+    // Agrupa logs por dia
+    final Map<String, List<dynamic>> groupedLogs = {};
+    for (var log in state.logs) {
+      final date = DateTime.parse(log['date'].toString()).toLocal();
+      final dayKey = DateFormat('yyyy-MM-dd').format(date);
+      if (!groupedLogs.containsKey(dayKey)) {
+        groupedLogs[dayKey] = [];
+      }
+      groupedLogs[dayKey]!.add(log);
+    }
+
+    final sortedDayKeys = groupedLogs.keys.toList()..sort((a, b) => b.compareTo(a));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -279,14 +318,44 @@ class HistoryView extends StatelessWidget {
               ),
             ),
           ),
-        ...state.logs.map((log) {
-          final date = DateTime.parse(log['date'].toString()).toLocal();
-          return _buildHistoryItem(context, theme, colors, {
-            "id": log['id'],
-            "type": "Água",
-            "time": "${_getShortDayName(date)} ${date.day} - ${DateFormat('HH:mm').format(date)}",
-            "amount": log['amount'],
-          });
+        ...sortedDayKeys.map((dayKey) {
+          final logsForDay = groupedLogs[dayKey]!;
+          final date = DateTime.parse(dayKey);
+          final isToday = DateFormat('yyyy-MM-dd').format(DateTime.now()) == dayKey;
+          final isYesterday = DateFormat('yyyy-MM-dd').format(
+                DateTime.now().subtract(const Duration(days: 1)),
+              ) ==
+              dayKey;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, top: 12, bottom: 8),
+                child: Text(
+                  isToday
+                      ? "HOJE"
+                      : isYesterday
+                          ? "ONTEM"
+                          : "${_getShortDayName(date)} ${date.day}/${date.month}",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+              ...logsForDay.map((log) {
+                final logDate = DateTime.parse(log['date'].toString()).toLocal();
+                return _buildHistoryItem(context, theme, colors, {
+                  "id": log['id'],
+                  "type": "Água",
+                  "time": DateFormat('HH:mm').format(logDate),
+                  "amount": log['amount'],
+                });
+              }),
+            ],
+          );
         }),
       ],
     );
@@ -431,7 +500,7 @@ class _ChartSectionState extends State<_ChartSection> {
 
   @override
   Widget build(BuildContext context) {
-    // Agrupar logs por dia para o gráfico (semana atual)
+    // Agrupar logs por dia para o gráfico (semana atual de domingo a sábado)
     final Map<String, int> dailySums = {};
     final now = DateTime.now();
     final sunday = now.subtract(Duration(days: now.weekday % 7));
@@ -451,14 +520,17 @@ class _ChartSectionState extends State<_ChartSection> {
     }
 
     final List<String> weekDays = [
+      "DOM",
       "SEG",
       "TER",
       "QUA",
       "QUI",
       "SEX",
       "SÁB",
-      "DOM",
     ];
+
+    final sortedEntries = dailySums.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,10 +560,11 @@ class _ChartSectionState extends State<_ChartSection> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: dailySums.entries.map((entry) {
+            children: sortedEntries.asMap().entries.map((entryMap) {
+              final index = entryMap.key;
+              final entry = entryMap.value;
               final double progress = (entry.value / widget.state.dailyGoal)
                   .clamp(0.0, 1.2);
-              final dayIndex = DateTime.parse(entry.key).weekday - 1;
               final bool isSelected = selectedDayKey == entry.key;
 
               return GestureDetector(
@@ -528,7 +601,7 @@ class _ChartSectionState extends State<_ChartSection> {
                         ),
                       ),
                     Container(
-                      width: 30,
+                      width: 32,
                       height: 140 * progress,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -564,7 +637,7 @@ class _ChartSectionState extends State<_ChartSection> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      weekDays[dayIndex % 7],
+                      weekDays[index],
                       style: TextStyle(
                         fontSize: 10,
                         color: isSelected
@@ -581,6 +654,7 @@ class _ChartSectionState extends State<_ChartSection> {
         ),
       ],
     );
+  }
   }
 }
 
@@ -618,7 +692,7 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      firstDate: DateTime.now().subtract(const Duration(days: 15)),
       lastDate: DateTime.now(),
     );
     if (picked != null && picked != selectedDate) {

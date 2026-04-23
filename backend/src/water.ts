@@ -35,7 +35,7 @@ export async function addWater(req: AuthRequest, res: Response) {
             data: {
                 amount,
                 date: date
-                    ? new Date(new Date(date as string).getTime() - offsetMinutes * 60 * 1000)
+                    ? new Date(date as string)
                     : new Date(),
                 userId: userId!
             }
@@ -67,33 +67,22 @@ export async function history(req: AuthRequest, res: Response) {
         if (period && typeof period === 'string' && period.endsWith('d')) {
             statsDays = parseInt(period.replace('d', ''))
         }
-        startDate = new Date(now.getTime() - statsDays * 24 * 60 * 60 * 1000)
+        const startOfToday = getStartOfUserDayInUTC(req)
+        startDate = new Date(startOfToday.getTime() - (statsDays - 1) * 24 * 60 * 60 * 1000)
     }
 
-    const statsLogs = await prisma.waterLog.findMany({
+    const logs = await prisma.waterLog.findMany({
         where: {
             userId: userId!,
             date: { gte: startDate, lte: endDate }
         },
         orderBy: { date: 'desc' }
     })
+    const statsLogs = logs; // They are the same now since they use the same range
 
-    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
 
-    const historyLogs = await prisma.waterLog.findMany({
-        where: {
-            userId: userId!,
-            date: { gte: fifteenDaysAgo }
-        },
-        orderBy: { date: 'desc' }
-    })
+    // logs is already ordered desc from Prisma
 
-    const combinedMap = new Map()
-    statsLogs.forEach(l => combinedMap.set(l.id, l))
-    historyLogs.forEach(l => combinedMap.set(l.id, l))
-    const logs = Array.from(combinedMap.values()).sort((a: any, b: any) =>
-        b.date.getTime() - a.date.getTime()
-    )
 
     const user = await prisma.user.findUnique({
         where: { id: userId! },
