@@ -28,8 +28,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex);
-    // Carrega dados iniciais do backend e sincroniza alertas/configurações
-    context.read<HomeCubit>().loadTodayData();
+    // HomeCubit já carrega os dados no BlocProvider inicial (main.dart).
     context.read<NotificationCubit>().loadPreferences();
     context.read<SettingsCubit>().loadSettings();
   }
@@ -600,20 +599,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.wifi_off_rounded,
+                  Icons.error_outline_rounded,
                   size: 60,
                   color: colors.error.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Sem conexão ou erro de rede',
+                  'Não foi possível carregar agora',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
                   child: Text(
-                    'Verifique sua conexão com a internet.',
+                    state.message,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.5),

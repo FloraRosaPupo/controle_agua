@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AppJwt {
@@ -13,12 +14,14 @@ class AppJwt {
   );
 
   static String? _memory;
+  static final ValueNotifier<bool> authState = ValueNotifier<bool>(false);
 
   //hydrate é uma função que carrega o token do storage
   static Future<void> hydrate() async {
     final t = await _storage.read(key: _key); //le o token do storage
     if (t == null || t.isEmpty) {
       _memory = null;
+      authState.value = false;
       return;
     }
     if (_jwtExpired(t)) {
@@ -26,6 +29,7 @@ class AppJwt {
       return;
     }
     _memory = t;
+    authState.value = true;
   }
   //bearerForSupabase é uma função que retorna o token para o supabase
   static Future<String?> bearerForSupabase() async {
@@ -50,12 +54,14 @@ class AppJwt {
   static Future<void> setFromLogin(String token) async {
     _memory = token;
     await _storage.write(key: _key, value: token); //salva o token no storage
+    authState.value = true;
   }
 
   //clear é uma função que limpa o token do storage
   static Future<void> clear() async {
     _memory = null;
     await _storage.delete(key: _key);
+    authState.value = false;
   }
 
   //hasValidStoredToken é uma função que verifica se o token é valido
@@ -63,6 +69,9 @@ class AppJwt {
     final t = await bearerForSupabase();
     return t != null && t.isNotEmpty;
   }
+
+  static bool get isAuthenticated =>
+      _memory != null && _memory!.isNotEmpty && !_jwtExpired(_memory!);
 
   //_jwtExpired é uma função que verifica se o token expirou
   static bool _jwtExpired(String token) {

@@ -5,18 +5,18 @@ class LocalDatabaseService {
   static Database? _db;
 
   static Future<Database> get _database async {
-    _db ??= await _initDB();
+    _db ??= await _initDB(); //inicializa o banco de dados se não estiver inicializado
     return _db!;
   }
 
   static Future<Database> _initDB() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'bebeu_offline.db');
+    final dbPath = await getDatabasesPath(); //pega o caminho do banco de dados
+    final path = join(dbPath, 'bebeu_offline.db'); //junta o caminho do banco de dados com o nome do banco de dados -> bebeu_offline.db
 
-    return openDatabase(
+    return openDatabase( //abre o banco de dados 
       path,
-      version: 1,
-      onCreate: (db, version) async {
+      version: 1, //so muda a versão do banco de dados se mudar o schema
+      onCreate: (/*db -> banco de dados*/db,/*version -> versão do banco de dados*/ version) async { //cria as tabelas do banco de dados
         await db.execute('''
           CREATE TABLE cached_data (
             id INTEGER PRIMARY KEY,
@@ -26,7 +26,7 @@ class LocalDatabaseService {
             user_name TEXT,
             updated_at TEXT
           )
-        ''');
+        '''); //cria a tabela cached_data
         await db.execute('''
           CREATE TABLE pending_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +34,7 @@ class LocalDatabaseService {
             created_at TEXT NOT NULL,
             synced INTEGER DEFAULT 0
           )
-        ''');
+        '''); //cria a tabela pending_logs
       },
     );
   }
@@ -44,25 +44,25 @@ class LocalDatabaseService {
     required int dailyGoal,
     required String userName,
   }) async {
-    final db = await _database;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    await db.insert(
+    final db = await _database; //pega o banco de dados
+    final today = DateTime.now().toIso8601String().substring(0, 10); //pega a data atual
+    await db.insert( //insere os dados na tabela cached_data
       'cached_data',
       {
         'date': today,
-        'total_intake': totalIntake,
-        'daily_goal': dailyGoal,
-        'user_name': userName,
+        'total_intake': totalIntake, //total de ml ingeridos
+        'daily_goal': dailyGoal, //meta de ml diária
+        'user_name': userName, //nome do usuário
         'updated_at': DateTime.now().toIso8601String(),
       },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      conflictAlgorithm: ConflictAlgorithm.replace, //substitui os dados se a data já existir
     );
   }
 
-  static Future<Map<String, dynamic>?> getCachedData() async {
-    final db = await _database;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final rows = await db.query(
+  static Future<Map<String, dynamic>?> getCachedData() async { //pega os dados da tabela cached_data
+    final db = await _database; //pega o banco de dados
+    final today = DateTime.now().toIso8601String().substring(0, 10); //pega a data atual
+    final rows = await db.query( //pega os dados da tabela cached_data
       'cached_data',
       where: 'date = ?',
       whereArgs: [today],
@@ -83,16 +83,17 @@ class LocalDatabaseService {
     final db = await _database;
     return db.query(
       'pending_logs',
-      where: 'synced = 0',
+      where: 'synced = 0',  //0 -> não sincronizado
       orderBy: 'created_at ASC',
     );
   }
 
+//marca o log como sincronizado
   static Future<void> markLogSynced(int id) async {
     final db = await _database;
     await db.update(
       'pending_logs',
-      {'synced': 1},
+      {'synced': 1}, //1 -> sincronizado
       where: 'id = ?',
       whereArgs: [id],
     );

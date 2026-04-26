@@ -1,6 +1,13 @@
 /// <reference path="../types-shim.d.ts" />
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.49.4";
 import * as jose from "npm:jose@5.9.6";
+
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
 
 export type AuthedClient = { userId: string; admin: SupabaseClient };
 
@@ -18,7 +25,7 @@ export async function signUserJwt(userId: string, secret: string): Promise<strin
  * Valida JWT HS256 com `userId` no payload (Express ou Edge auth-login).
  */
 export async function requireUser(req: Request): Promise<AuthedClient | Response> {
-  const auth = req.headers.get("Authorization");
+  const auth = req.headers.get("x-app-auth") ?? req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) {
     return json({ error: "Token inválido" }, 401);
   }
@@ -68,7 +75,7 @@ export function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-timezone-offset",
+      "authorization, x-app-auth, x-client-info, apikey, content-type, x-timezone-offset",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   };
 }

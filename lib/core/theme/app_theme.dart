@@ -10,28 +10,30 @@ class AppTheme {
   static SharedPreferences? _prefs;
 
   static Future<void> initialize() async {
-    _prefs ??= await SharedPreferences.getInstance();
-    final savedMode = _prefs?.getString(_themeModeKey);
-    themeMode.value = _themeModeFromString(savedMode);
+    _prefs ??= await SharedPreferences.getInstance(); //inicializa o shared preferences
+    final savedMode = _prefs?.getString(_themeModeKey); //pega o tema salvo
+    themeMode.value = _themeModeFromString(savedMode); //converte o tema salvo para o tema atual
   }
 
+//define o tema atual
   static Future<void> setThemeFromString(
     String themeString, {
-    bool persist = false,
+    bool persist = false, //se true, salva o tema no shared preferences
   }) async {
-    themeMode.value = _themeModeFromString(themeString);
-    if (!persist) return;
+    themeMode.value = _themeModeFromString(themeString); //converte o tema salvo para o tema atual
+    if (!persist) return; //se não persistir, retorna
 
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs?.setString(_themeModeKey, themeString);
+    _prefs ??= await SharedPreferences.getInstance(); //inicializa o shared preferences
+    await _prefs?.setString(_themeModeKey, themeString); //salva o tema no shared preferences
   }
 
-  static String get currentThemeString => _themeModeToString(themeMode.value);
+  static String get currentThemeString => _themeModeToString(themeMode.value); //pega o tema atual
 
+//converte o tema salvo para o tema atual
   static ThemeMode _themeModeFromString(String? themeString) {
-    if (themeString == 'dark') return ThemeMode.dark;
-    if (themeString == 'light') return ThemeMode.light;
-    return ThemeMode.system;
+    if (themeString == 'dark') return ThemeMode.dark; //se o tema for dark, retorna ThemeMode.dark
+    if (themeString == 'light') return ThemeMode.light; //se o tema for light, retorna ThemeMode.light
+    return ThemeMode.system; //se o tema for system, retorna ThemeMode.system
   }
 
   static String _themeModeToString(ThemeMode mode) {

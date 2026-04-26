@@ -13,7 +13,8 @@ import 'core/services/widget_service.dart';
 import 'core/config/supabase_env.dart';
 import 'core/config/load_supabase_env_assets.dart';
 import 'core/config/load_supabase_local_stub.dart'
-    if (dart.library.io) 'core/config/load_supabase_local_io.dart' as supa_local;
+    if (dart.library.io) 'core/config/load_supabase_local_io.dart'
+    as supa_local;
 import 'core/auth/app_jwt.dart';
 import 'core/services/notification_service.dart';
 
@@ -60,7 +61,6 @@ Future<void> _initSupabase() async {
   await Supabase.initialize(
     url: SupabaseEnv.urlResolved,
     anonKey: SupabaseEnv.anonKey,
-    accessToken: AppJwt.bearerForSupabase,
   );
 }
 
@@ -133,17 +133,34 @@ void main() async {
   }
 
   final router = GoRouter(
-   
+    refreshListenable: AppJwt.authState,
     redirect: (context, state) {
-      //guard -> 
-      if (!loggedIn && state.path == '/home' ) {
-        return '/splash';
+      final isLogged = AppJwt.isAuthenticated;
+      final goingToHome = state.matchedLocation == '/home';
+      final goingToSplash = state.matchedLocation == '/splash';
+      final goingToLogin = state.matchedLocation == '/login';
+      final goingToRegister = state.matchedLocation == '/register';
+
+      if (!isLogged && goingToHome) return '/login';
+      if (isLogged && (goingToSplash || goingToLogin || goingToRegister)) {
+        return '/home';
       }
-      return null; //null é usado para não redirecionar
+      return null;
     },
-    initialLocation: '/splash', //initialLocation é usado para definir a tela inicial
+    initialLocation: '/splash',
     routes: [
       GoRoute(
+        path: '/',
+        redirect: (_, __) => '/splash',
+      ),
+      GoRoute(
+        name: 'splash',
+        path: '/splash',
+        builder: (context, state) => SplashPage(isLoggedIn: loggedIn),
+      ),
+
+      GoRoute(
+        name: 'login',
         path: '/login',
         builder: (context, state) => BlocProvider(
           create: (_) => LoginCubit(authService),
@@ -151,15 +168,24 @@ void main() async {
         ),
       ),
       GoRoute(
+        name: 'register',
         path: '/register',
-        //builder é usado para construir a tela de registro
         builder: (context, state) => BlocProvider(
-          create: (_) => RegisterCubit(authService), 
+          create: (_) => RegisterCubit(authService),
           child: const RegisterPage(),
         ),
       ),
-      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
+      GoRoute(
+        name: 'home',
+        path: '/home',
+        builder: (context, state) => const HomePage(),
+      ),
     ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text('Rota não encontrada: ${state.uri}'),
+      ),
+    ),
   );
 
   runApp(
@@ -256,12 +282,14 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.themeMode,
       builder: (context, mode, child) {
-        return MaterialApp.router( // MaterialApp.router é usado para configurar a navegação do app
+        return MaterialApp.router(
+          // MaterialApp.router é usado para configurar a navegação do app
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: mode,
-          routerConfig: widget.router, // routerConfig é usado para configurar a navegação do app
+          routerConfig: widget
+              .router, // routerConfig é usado para configurar a navegação do app
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

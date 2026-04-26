@@ -92,7 +92,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       );
       await NotificationService().setVibrationEnabled(state.vibration);
     } catch (e) {
-      debugPrint("Erro loadSettings: \$e");
+      debugPrint('Erro loadSettings: $e');
       emit(state.copyWith(isLoading: false, error: 'Falha de conexão. Tente novamente.', clearError: false));
     }
   }
@@ -130,7 +130,7 @@ class SettingsCubit extends Cubit<SettingsState> {
         await NotificationService().setVibrationEnabled(value as bool);
       }
     } catch (e) {
-      debugPrint("Erro updateSetting \$key: \$e");
+      debugPrint('Erro updateSetting $key: $e');
       // Revert optimistic update
       emit(oldState);
       if (key == 'theme') {

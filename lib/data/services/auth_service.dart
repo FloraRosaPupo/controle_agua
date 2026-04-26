@@ -72,7 +72,7 @@ class AuthService {
         await _client.functions.invoke(
           'settings',
           method: HttpMethod.put,
-          headers: edgeHeaders(),
+          headers: await edgeHeadersWithAuth(),
           body: {'dailyGoal': goal},
         );
       } catch (_) {}
@@ -94,7 +94,7 @@ class AuthService {
       await _client.functions.invoke(
         'settings',
         method: HttpMethod.put,
-        headers: edgeHeaders(),
+        headers: await edgeHeadersWithAuth(),
         queryParameters: {'op': 'password'},
         body: {
           'currentPassword': currentPassword,

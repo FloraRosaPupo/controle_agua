@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/models/notification_preferences.dart';
 import '../../../data/services/settings_service.dart';
@@ -38,6 +39,7 @@ class NotificationCubit extends Cubit<NotificationState> {
         await _notificationService.scheduleHydrationReminders(prefs);
       }
     } catch (e) {
+      debugPrint('Erro loadPreferences: $e');
       if (state is! NotificationLoaded) {
         emit(NotificationError(e.toString()));
       }
@@ -55,8 +57,8 @@ class NotificationCubit extends Cubit<NotificationState> {
         });
         await _notificationService.scheduleHydrationReminders(prefs);
       } catch (e) {
+        debugPrint('Erro updatePreferences: $e');
         emit(oldState);
-        emit(NotificationError('Erro ao salvar: $e'));
       }
     }
   }

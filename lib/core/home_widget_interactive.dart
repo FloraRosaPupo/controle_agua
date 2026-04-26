@@ -48,7 +48,6 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       await Supabase.initialize(
         url: SupabaseEnv.urlResolved,
         anonKey: SupabaseEnv.anonKey,
-        accessToken: AppJwt.bearerForSupabase,
       );
     }
 
