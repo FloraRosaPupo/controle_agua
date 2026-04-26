@@ -133,10 +133,11 @@ void main() async {
   }
 
   final router = GoRouter(
+   
     redirect: (context, state) {
       //guard -> 
-      if (!loggedIn && state.path == '/home') {
-        return '/login';
+      if (!loggedIn && state.path == '/home' ) {
+        return '/splash';
       }
       return null; //null é usado para não redirecionar
     },

@@ -85,6 +85,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() => AppJwt.hasValidStoredToken();
 
+  //changePassword é uma função que altera a senha do usuário
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
