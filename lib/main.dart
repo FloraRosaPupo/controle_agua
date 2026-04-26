@@ -5,11 +5,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/home_widget_interactive.dart';
 import 'core/services/widget_service.dart';
-import 'core/api/api_client.dart';
+import 'core/config/supabase_env.dart';
+import 'core/config/load_supabase_env_assets.dart';
+import 'core/config/load_supabase_local_stub.dart'
+    if (dart.library.io) 'core/config/load_supabase_local_io.dart' as supa_local;
+import 'core/auth/app_jwt.dart';
 import 'core/services/notification_service.dart';
 
 import 'data/services/water_service.dart';
@@ -26,7 +31,7 @@ import 'presentation/auth/cubit/register_cubit.dart';
 import 'presentation/home/cubit/settings_cubit.dart';
 import 'presentation/home/cubit/notification_cubit.dart';
 import 'data/services/settings_service.dart';
-import 'package:flutter/foundation.dart'; // import para kIsWeb
+import 'package:flutter/foundation.dart';
 
 class AppBlocObserver extends BlocObserver {
   @override
@@ -44,11 +49,29 @@ class AppBlocObserver extends BlocObserver {
   }
 }
 
+Future<void> _initSupabase() async {
+  if (!SupabaseEnv.hasAnonKey) {
+    throw StateError(
+      'SUPABASE_ANON_KEY em falta.\n'
+      '• Preenche assets/env/app.env ou .env na raiz (desktop).\n'
+      '• Ou flutter run --dart-define=SUPABASE_ANON_KEY=...',
+    );
+  }
+  await Supabase.initialize(
+    url: SupabaseEnv.urlResolved,
+    anonKey: SupabaseEnv.anonKey,
+    accessToken: AppJwt.bearerForSupabase,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await loadSupabaseEnvFromAssets();
+  supa_local.tryLoadSupabaseLocalJson();
   await AppTheme.initialize();
+  await AppJwt.hydrate();
+  await _initSupabase();
 
-  // Ativa o observer para debugar estados (apenas em debug)
   if (kDebugMode) {
     Bloc.observer = AppBlocObserver();
   }
@@ -58,10 +81,9 @@ void main() async {
   final notificationService = NotificationService();
   await notificationService.initialize();
 
-  final apiClient = ApiClient();
-  final authService = AuthService(apiClient);
-  final waterService = WaterService(apiClient);
-  final settingsService = SettingsService(apiClient);
+  final authService = AuthService();
+  final waterService = WaterService();
+  final settingsService = SettingsService();
   notificationService.configureQuickAddAction(
     resolveQuickAddAmount: () async {
       final data = await settingsService.getSettings();
@@ -101,7 +123,6 @@ void main() async {
     },
   );
 
-  // Verifica se temos token localmente antes de decidir a tela principal!
   final loggedIn = await authService.isLoggedIn();
   if (!kIsWeb) {
     await _syncWidgetWithLatestData(
@@ -112,12 +133,15 @@ void main() async {
   }
 
   final router = GoRouter(
-    initialLocation: '/splash',
+    redirect: (context, state) {
+      //guard -> 
+      if (!loggedIn && state.path == '/home') {
+        return '/login';
+      }
+      return null; //null é usado para não redirecionar
+    },
+    initialLocation: '/splash', //initialLocation é usado para definir a tela inicial
     routes: [
-      GoRoute(
-        path: '/splash',
-        builder: (context, state) => SplashPage(isLoggedIn: loggedIn),
-      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => BlocProvider(
@@ -127,8 +151,9 @@ void main() async {
       ),
       GoRoute(
         path: '/register',
+        //builder é usado para construir a tela de registro
         builder: (context, state) => BlocProvider(
-          create: (_) => RegisterCubit(authService),
+          create: (_) => RegisterCubit(authService), 
           child: const RegisterPage(),
         ),
       ),
@@ -137,6 +162,7 @@ void main() async {
   );
 
   runApp(
+    // MultiProvider é usado para fornecer o AuthService para toda a árvore de widgets
     MultiProvider(
       providers: [RepositoryProvider<AuthService>.value(value: authService)],
       child: MultiBlocProvider(
@@ -165,7 +191,11 @@ Future<void> _syncWidgetWithLatestData({
   required SettingsService settingsService,
 }) async {
   if (!isLoggedIn) {
-    await WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
+    await WidgetService.updateHomeWidget(
+      progress: 0,
+      currentIntake: 0,
+      goal: 2000,
+    );
     return;
   }
 
@@ -184,7 +214,11 @@ Future<void> _syncWidgetWithLatestData({
       goal: goal,
     );
   } catch (_) {
-    await WidgetService.updateHomeWidget(progress: 0, currentIntake: 0, goal: 2000);
+    await WidgetService.updateHomeWidget(
+      progress: 0,
+      currentIntake: 0,
+      goal: 2000,
+    );
   }
 }
 
@@ -221,20 +255,18 @@ class _MyAppState extends State<MyApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppTheme.themeMode,
       builder: (context, mode, child) {
-        return MaterialApp.router(
+        return MaterialApp.router( // MaterialApp.router é usado para configurar a navegação do app
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: mode,
-          routerConfig: widget.router,
+          routerConfig: widget.router, // routerConfig é usado para configurar a navegação do app
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('pt', 'BR'),
-          ],
+          supportedLocales: const [Locale('pt', 'BR')],
           locale: const Locale('pt', 'BR'),
         );
       },
@@ -247,7 +279,10 @@ Widget myAppLightPreview() {
   return MaterialApp(
     theme: AppTheme.lightTheme,
     debugShowCheckedModeBanner: false,
-    home: const LoginPage(),
+    home: BlocProvider(
+      create: (_) => LoginCubit(AuthService()),
+      child: const LoginPage(),
+    ),
   );
 }
 
@@ -256,6 +291,9 @@ Widget myAppDarkPreview() {
   return MaterialApp(
     theme: AppTheme.darkTheme,
     debugShowCheckedModeBanner: false,
-    home: const LoginPage(),
+    home: BlocProvider(
+      create: (_) => LoginCubit(AuthService()),
+      child: const LoginPage(),
+    ),
   );
 }

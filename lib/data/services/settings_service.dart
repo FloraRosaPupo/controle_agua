@@ -1,29 +1,43 @@
-import 'package:dio/dio.dart';
-import '../../core/api/api_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/api/edge_functions.dart';
 
 class SettingsService {
-  final ApiClient _apiClient;
+  SupabaseClient get _client => Supabase.instance.client;
 
-  SettingsService(this._apiClient);
+  SettingsService();
 
   Future<Map<String, dynamic>> getSettings() async {
     try {
-      final response = await _apiClient.dio.get('/settings');
-      return response.data;
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['error'] ?? 'Erro ao buscar configurações',
+      final response = await _client.functions.invoke(
+        'settings',
+        method: HttpMethod.get,
+        headers: edgeHeaders(),
       );
+      final raw = edgeData(response);
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      throw Exception('Resposta inválida');
+    } on FunctionException catch (e) {
+      throw Exception(edgeErrorMessage(e));
+    } catch (e) {
+      throw Exception('Erro ao buscar configurações: $e');
     }
   }
 
   Future<void> updateSettings(Map<String, dynamic> data) async {
     try {
-      await _apiClient.dio.put('/settings', data: data);
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['error'] ?? 'Erro ao atualizar configurações',
+      await _client.functions.invoke(
+        'settings',
+        method: HttpMethod.put,
+        headers: edgeHeaders(),
+        body: data,
       );
+    } on FunctionException catch (e) {
+      throw Exception(edgeErrorMessage(e));
+    } catch (e) {
+      throw Exception('Erro ao atualizar configurações: $e');
     }
   }
 }

@@ -2,9 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'api/api_client.dart';
+import 'auth/app_jwt.dart';
+import 'config/supabase_env.dart';
+import 'config/load_supabase_env_assets.dart';
+import 'config/load_supabase_local_stub.dart'
+    if (dart.library.io) 'config/load_supabase_local_io.dart' as supa_local;
 import 'services/widget_service.dart';
 import '../data/services/water_service.dart';
 import '../data/services/settings_service.dart';
@@ -12,20 +16,21 @@ import '../data/services/local_database_service.dart';
 import '../data/services/connectivity_service.dart';
 import 'services/notification_service.dart';
 
-const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-);
-
 /// Chamado pelo Android ao tocar em "+" no widget (broadcast em segundo plano).
 @pragma('vm:entry-point')
 Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
+  await loadSupabaseEnvFromAssets();
+  supa_local.tryLoadSupabaseLocalJson();
+  await AppJwt.hydrate();
+
   final host = uri?.host.toLowerCase();
   final path = uri?.path.toLowerCase();
-  debugPrint('[Widget +] Callback recebido | uri=$uri | host=$host | path=$path');
+  debugPrint(
+    '[Widget +] Callback recebido | uri=$uri | host=$host | path=$path',
+  );
   if (host != 'addwater' && path != '/addwater') return;
 
   final notify = NotificationService();
@@ -34,9 +39,22 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
   try {
     await HomeWidget.setAppGroupId('group.com.example.bebeu');
 
-    final token = await _storage.read(key: 'jwt_token');
-    if (token == null || token.isEmpty) {
-      debugPrint('[Widget +] Token ausente no secure storage');
+    if (!SupabaseEnv.hasAnonKey) {
+      debugPrint('[Widget +] SUPABASE_ANON_KEY ausente em app.env');
+      return;
+    }
+
+    if (!Supabase.instance.isInitialized) {
+      await Supabase.initialize(
+        url: SupabaseEnv.urlResolved,
+        anonKey: SupabaseEnv.anonKey,
+        accessToken: AppJwt.bearerForSupabase,
+      );
+    }
+
+    final jwt = await AppJwt.bearerForSupabase();
+    if (jwt == null || jwt.isEmpty) {
+      debugPrint('[Widget +] Sem JWT — faça login no app.');
       return;
     }
 
@@ -51,22 +69,20 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       return;
     }
 
-    // Timeout curto: no contexto background o Android mata processos lentos.
-    final client = ApiClient();
-    client.setToken(token);
-    client.dio.options.connectTimeout = const Duration(seconds: 12);
-    client.dio.options.receiveTimeout = const Duration(seconds: 12);
-
-    final water = WaterService(client);
-    final settingsService = SettingsService(client);
+    final water = WaterService();
+    final settingsService = SettingsService();
 
     try {
       final settingsInfo = await settingsService.getSettings();
       quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ?? 200;
       fallbackGoal = (settingsInfo['dailyGoal'] as num?)?.toInt() ?? 2000;
-      debugPrint('[Widget +] Settings | quickAdd=$quickAddAmount | goal=$fallbackGoal');
+      debugPrint(
+        '[Widget +] Settings | quickAdd=$quickAddAmount | goal=$fallbackGoal',
+      );
     } catch (_) {
-      debugPrint('[Widget +] Fallback settings | quickAdd=$quickAddAmount | goal=$fallbackGoal');
+      debugPrint(
+        '[Widget +] Fallback settings | quickAdd=$quickAddAmount | goal=$fallbackGoal',
+      );
     }
 
     bool added = false;
@@ -110,7 +126,6 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       );
       debugPrint('[Widget +] Widget atualizado | total=$total goal=$goal');
     } catch (e) {
-      // Água foi adicionada, mas falhou ao buscar o resumo — notifica simples.
       await notify.showNotification(
         id: 8888,
         title: 'Bebeu? 💧',
@@ -141,7 +156,10 @@ Future<void> _saveOffline(
 
     final cached = await LocalDatabaseService.getCachedData();
     final cachedIntake = cached?['total_intake'] as int? ?? 0;
-    final goal = (cached?['daily_goal'] as int? ?? fallbackGoal).clamp(1, 100000);
+    final goal = (cached?['daily_goal'] as int? ?? fallbackGoal).clamp(
+      1,
+      100000,
+    );
     final newIntake = cachedIntake + amount;
 
     await LocalDatabaseService.updateCachedIntake(newIntake);

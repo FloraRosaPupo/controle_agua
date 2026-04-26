@@ -37,6 +37,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void _navigateToNextScreen() {
     if (!mounted) return;
 
+    //guard -> 
     final destination = widget.isLoggedIn ? '/home' : '/login';
     context.go(destination);
   }

@@ -23,7 +23,7 @@ class HomeLoaded extends HomeState {
     this.syncedCount = 0,
   });
 }
-
+// HomeOffline é usado para mostrar que o app está offline
 class HomeOffline extends HomeState {
   final int currentIntake;
   final int dailyGoal;

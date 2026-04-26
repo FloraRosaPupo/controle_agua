@@ -12,7 +12,6 @@ import 'cubit/login_state.dart';
 import '../../data/services/auth_service.dart';
 import '../home/cubit/notification_cubit.dart';
 import '../home/cubit/settings_cubit.dart';
-import '../../core/api/api_client.dart';
 import '../../core/theme/app_assets.dart';
 
 class LoginPage extends StatefulWidget {
@@ -27,6 +26,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   Timer? _loadingTimer;
   int _loadingSeconds = 0;
+
 
   void _onLoginStateChanged(LoginState state) {
     if (state is LoginLoading) {
@@ -63,7 +63,8 @@ class _LoginPageState extends State<LoginPage> {
             _onLoginStateChanged(state);
             if (state is LoginSuccess) {
               // Token acaba de ser definido; recarrega settings do banco e agenda notificações.
-              context.read<NotificationCubit>().loadPreferences();
+              //BlocProvider.of<NotificationCubit>(context).loadPreferences();
+              context.read<NotificationCubit>().loadPreferences(); // Carrega as preferências de notificação 
               context.read<SettingsCubit>().loadSettings();
               context.go('/home');
             } else if (state is LoginFailure) {
@@ -83,136 +84,148 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  const SizedBox(height: 40),
+                    const SizedBox(height: 40),
 
-                  // Logo / Título
-                  Center(
-                    child: Column(
-                      children: [
-                        Image.asset(
-                          AppAssets.logo,
-                          height: 100,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 16),
-                        Text("Bebeu", style: theme.textTheme.headlineLarge),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Mantenha-se hidratado todos os dias.",
-                          style: theme.textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  Text("Bem-vindo de volta", style: theme.textTheme.titleLarge),
-
-                  const SizedBox(height: 32),
-
-                  Text(
-                    "E-MAIL",
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  TextFormField(
-                    controller: _controller.emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    validator: Validators.validateEmail,
-                    decoration: InputDecoration(
-                      hintText: "seu@email.com",
-                      hintStyle: TextStyle(
-                        color: colors.onSurface.withValues(alpha: 0.45),
+                    // Logo / Título
+                    Center(
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            AppAssets.logo,
+                            height: 100,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 16),
+                          Text("Bebeu", style: theme.textTheme.headlineLarge),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Mantenha-se hidratado todos os dias.",
+                            style: theme.textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 60),
 
-                  Text(
-                    "SENHA",
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w600,
+                    Text(
+                      "Bem-vindo de volta",
+                      style: theme.textTheme.titleLarge,
                     ),
-                  ),
-                  const SizedBox(height: 8),
 
-                  TextFormField(
-                    controller: _controller.passwordController,
-                    obscureText: !_controller.isPasswordVisible,
-                    autofillHints: const [AutofillHints.password],
-                    validator: Validators.validatePassword,
-                    decoration: InputDecoration(
-                      hintText: "••••••••",
-                      hintStyle: TextStyle(
-                        color: colors.onSurface.withValues(alpha: 0.45),
+                    const SizedBox(height: 32),
+
+                    Text(
+                      "E-MAIL",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          _controller.togglePasswordVisibility(() {
-                            setState(() {});
-                          });
-                        },
-                        icon: Icon(
-                          _controller.isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                    ),
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: _controller.emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      validator: Validators.validateEmail,
+                      decoration: InputDecoration(
+                        hintText: "seu@email.com",
+                        hintStyle: TextStyle(
+                          color: colors.onSurface.withValues(alpha: 0.45),
                         ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 24),
+                    Text(
+                      "SENHA",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
 
-                  BlocBuilder<LoginCubit, LoginState>(
-                    builder: (context, state) {
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton(
-                          onPressed: state is LoginLoading
-                              ? null
-                              : () {
-                                  if (_formKey.currentState?.validate() ?? false) {
-                                    final email = _controller.emailController.text.trim();
-                                    final pwd = _controller.passwordController.text;
-                                    context.read<LoginCubit>().login(email, pwd);
-                                  }
-                                },
-                          child: state is LoginLoading
-                              ? const Text("Carregando...")
-                              : const Text(
-                                  "Entrar",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                    TextFormField(
+                      controller: _controller.passwordController,
+                      obscureText: !_controller.isPasswordVisible,
+                      autofillHints: const [AutofillHints.password],
+                      validator: Validators.validatePassword,
+                      decoration: InputDecoration(
+                        hintText: "••••••••",
+                        hintStyle: TextStyle(
+                          color: colors.onSurface.withValues(alpha: 0.45),
+                        ),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            _controller.togglePasswordVisibility(() {
+                              setState(() {});
+                            });
+                          },
+                          icon: Icon(
+                            _controller.isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    const SizedBox(height: 24),
+
+                    // BlocBuilder é usado para construir o botão de login
+                    BlocBuilder<LoginCubit, LoginState>(
+                      builder: (context, state) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: state is LoginLoading
+                                ? null
+                                : () {
+                                    if (_formKey.currentState?.validate() ??
+                                        false) {
+                                      final email = _controller
+                                          .emailController
+                                          .text
+                                          .trim();
+                                      final pwd =
+                                          _controller.passwordController.text;
+                                      context.read<LoginCubit>().login(
+                                        email,
+                                        pwd,
+                                      );
+                                    }
+                                  },
+                            child: state is LoginLoading
+                                ? const Text("Carregando...")
+                                : const Text(
+                                    "Entrar",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  Center(
-                    child: TextButton(
-                      onPressed: () => context.push('/register'),
-                      child: const Text("Ainda não tem conta? Cadastre-se"),
+                          ),
+                        );
+                      },
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 40),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: () => context.push('/register'),
+                        child: const Text("Ainda não tem conta? Cadastre-se"),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -230,7 +243,7 @@ Widget loginPageLightPreview() {
     theme: AppTheme.lightTheme,
     debugShowCheckedModeBanner: false,
     home: BlocProvider(
-      create: (_) => LoginCubit(AuthService(ApiClient())),
+      create: (_) => LoginCubit(AuthService()),
       child: const LoginPage(),
     ),
   );
@@ -242,7 +255,7 @@ Widget loginPageDarkPreview() {
     theme: AppTheme.darkTheme,
     debugShowCheckedModeBanner: false,
     home: BlocProvider(
-      create: (_) => LoginCubit(AuthService(ApiClient())),
+      create: (_) => LoginCubit(AuthService()),
       child: const LoginPage(),
     ),
   );

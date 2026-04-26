@@ -3,13 +3,11 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/api/api_client.dart';
 import '../../../data/services/auth_service.dart';
 import '../cubit/settings_cubit.dart';
 import 'change_password_dialog.dart';
 import 'water_lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -545,7 +543,7 @@ Widget settingsViewLightPreview() {
     theme: AppTheme.lightTheme,
     debugShowCheckedModeBanner: false,
     home: RepositoryProvider<AuthService>(
-      create: (_) => AuthService(ApiClient()),
+      create: (_) => AuthService(),
       child: const Scaffold(body: SafeArea(child: SettingsView())),
     ),
   );
@@ -557,7 +555,7 @@ Widget settingsViewDarkPreview() {
     theme: AppTheme.darkTheme,
     debugShowCheckedModeBanner: false,
     home: RepositoryProvider<AuthService>(
-      create: (_) => AuthService(ApiClient()),
+      create: (_) => AuthService(),
       child: const Scaffold(body: SafeArea(child: SettingsView())),
     ),
   );

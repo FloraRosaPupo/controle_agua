@@ -38,7 +38,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   home_widget: ^0.9.0
   path_provider: ^2.1.5
-  dio: ^5.9.2
   provider: ^6.1.5+1
   flutter_bloc: ^9.1.1
   bloc: ^9.2.0
@@ -53,6 +52,7 @@ dependencies:
   lottie: ^3.3.1
   flutter_secure_storage: ^9.2.4
   dotlottie_loader: ^0.0.5
+  supabase_flutter: ^2.12.4
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +94,7 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/animations/
+    - assets/env/app.env
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

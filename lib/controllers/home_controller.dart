@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/api/api_client.dart';
 import '../../data/services/water_service.dart';
 import 'package:bebeu/core/services/widget_service.dart';
 
 class HomeController extends ChangeNotifier {
-  final WaterService _waterService = WaterService(ApiClient());
+  final WaterService _waterService = WaterService();
 
   String userName = "Alex Silva";
   int _currentIntake = 0;
