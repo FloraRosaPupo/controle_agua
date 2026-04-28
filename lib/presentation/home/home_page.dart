@@ -306,20 +306,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     ColorScheme colors,
     Map<String, dynamic> log,
   ) {
-    return Dismissible(
-      key: Key(log["id"].toString()),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.delete_outline, color: Colors.red),
-      ),
-      confirmDismiss: (direction) async {
+    final dismissKey = GlobalObjectKey<_SwipeToDismissItemState>(log["id"]);
+    return _SwipeToDismissItem(
+      key: dismissKey,
+      onDelete: () async {
         final int amount = log["amount"];
         await context.read<HomeCubit>().deleteWaterLog(log["id"]);
 
@@ -345,7 +335,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           );
         }
-        return false; // O cubit já remove da lista, não precisa do Dismissible remover
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -396,6 +385,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Text(
               log["amount"] >= 0 ? "+${log["amount"]}ml" : "${log["amount"]}ml",
               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+            // Hint visual permanente: lixeira sutil à direita
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              onPressed: () {
+                dismissKey.currentState?.slideAndDismiss();
+              },
             ),
           ],
         ),
@@ -974,61 +971,164 @@ class _GoalSliderModalState extends State<_GoalSliderModal> {
   }
 }
 
-class _SwipeToDeleteItem extends StatefulWidget {
+class _SwipeToDismissItem extends StatefulWidget {
   final Widget child;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete;
 
-  const _SwipeToDeleteItem({
+  const _SwipeToDismissItem({
     super.key,
     required this.child,
     required this.onDelete,
   });
 
   @override
-  State<_SwipeToDeleteItem> createState() => _SwipeToDeleteItemState();
+  State<_SwipeToDismissItem> createState() => _SwipeToDismissItemState();
 }
 
-class _SwipeToDeleteItemState extends State<_SwipeToDeleteItem> {
+class _SwipeToDismissItemState extends State<_SwipeToDismissItem>
+    with SingleTickerProviderStateMixin {
   double _dragExtent = 0;
+  late AnimationController _snapController;
+  late Animation<double> _snapAnimation;
+  double _snapStart = 0;
+
+  // Limiar para confirmar exclusão (px)
+  static const double _threshold = -72.0;
+  // Máximo que o card pode ser arrastado
+  static const double _maxDrag = -96.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _snapAnimation = CurvedAnimation(
+      parent: _snapController,
+      curve: Curves.easeOutCubic,
+    );
+    _snapAnimation.addListener(() {
+      setState(() {
+        _dragExtent = _snapStart * (1 - _snapAnimation.value);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _snapController.dispose();
+    super.dispose();
+  }
+
+  void _snapBack() {
+    _snapStart = _dragExtent;
+    _snapController.forward(from: 0);
+  }
+
+  Future<void> slideAndDismiss() async {
+    if (_snapController.isAnimating) return;
+    
+    final slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    
+    final slideAnim = Tween<double>(begin: _dragExtent, end: _maxDrag).animate(
+      CurvedAnimation(parent: slideController, curve: Curves.easeOutCubic),
+    );
+    
+    slideAnim.addListener(() {
+      if (mounted) {
+        setState(() {
+          _dragExtent = slideAnim.value;
+        });
+      }
+    });
+    
+    await slideController.forward();
+    slideController.dispose();
+    
+    if (mounted) {
+      await widget.onDelete();
+      if (mounted) {
+        setState(() => _dragExtent = 0);
+      }
+    }
+  }
+
+  double get _progress => (_dragExtent / _threshold).clamp(0.0, 1.0);
+  bool get _pastThreshold => _dragExtent <= _threshold;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final bgOpacity = (0.08 + (_progress * 0.22)).clamp(0.0, 0.30);
+    final iconScale = _pastThreshold ? 1.25 : (0.85 + _progress * 0.4);
+    final iconOpacity = (0.3 + _progress * 0.7).clamp(0.0, 1.0);
+    final labelOpacity = ((_progress - 0.6) / 0.4).clamp(0.0, 1.0);
 
     return GestureDetector(
       onHorizontalDragUpdate: (details) {
+        if (_snapController.isAnimating) return;
         setState(() {
-          _dragExtent += details.delta.dx;
-          _dragExtent = _dragExtent.clamp(-100.0, 0.0);
+          _dragExtent = (_dragExtent + details.delta.dx).clamp(_maxDrag, 0.0);
         });
       },
-      onHorizontalDragEnd: (details) {
-        if (_dragExtent < -60) {
-          widget.onDelete();
+      onHorizontalDragEnd: (details) async {
+        if (_pastThreshold) {
+          await widget.onDelete();
+          if (mounted) {
+            setState(() => _dragExtent = 0);
+          }
+        } else {
+          _snapBack();
         }
-        setState(() {
-          _dragExtent = 0;
-        });
       },
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
+          // Fundo vermelho animado
           Positioned.fill(
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.15),
+                color: Colors.red.withValues(alpha: bgOpacity),
                 borderRadius: BorderRadius.circular(16),
               ),
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
-              child: Icon(
-                Icons.delete_outline,
-                color: Colors.red.withValues(
-                  alpha: _dragExtent < -30 ? 1.0 : 0.5,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Transform.scale(
+                    scale: iconScale,
+                    child: Icon(
+                      _pastThreshold
+                          ? Icons.delete_rounded
+                          : Icons.delete_outline_rounded,
+                      color: Colors.red.withValues(alpha: iconOpacity),
+                      size: 24,
+                    ),
+                  ),
+                  if (labelOpacity > 0) ...[
+                    const SizedBox(height: 4),
+                    Opacity(
+                      opacity: labelOpacity,
+                      child: const Text(
+                        'Excluir',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
+          // Card deslizando
           Transform.translate(
             offset: Offset(_dragExtent, 0),
             child: widget.child,
