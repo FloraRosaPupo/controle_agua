@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'dart:ui';
 
+/// Porcentagem em relação à meta (pode exceder 100).
+int _displayPercentMl(int intake, int goal) {
+  if (goal <= 0) return 0;
+  return ((intake / goal) * 100).round();
+}
+
+/// Preenchimento da barra (0–1); acima da meta permanece em 100% visual.
+double _barFillFactor(int intake, int goal) {
+  if (goal <= 0) return 0.0;
+  return (intake / goal).clamp(0.0, 1.0);
+}
+
 class HomeWidgetLarge extends StatelessWidget {
-  final double progress; // 0.0 to 1.0
+  /// Mantido para compatibilidade; barra e texto usam [currentIntake] / [goal].
+  final double progress;
   final int currentIntake;
   final int goal;
   final VoidCallback? onAddTap;
@@ -20,6 +33,12 @@ class HomeWidgetLarge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final percentInt = goal <= 0
+        ? (progress * 100).toInt()
+        : _displayPercentMl(currentIntake, goal);
+    final barFill = goal <= 0
+        ? progress.clamp(0.0, 1.0)
+        : _barFillFactor(currentIntake, goal);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final widgetWidth = screenWidth > 0
         ? (screenWidth - 48).clamp(280.0, 400.0)
@@ -84,7 +103,7 @@ class HomeWidgetLarge extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "${(progress * 100).toInt()}%",
+                    "$percentInt%",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -104,7 +123,7 @@ class HomeWidgetLarge extends StatelessWidget {
                     ),
                   ),
                   FractionallySizedBox(
-                    widthFactor: progress.clamp(0.0, 1.0),
+                    widthFactor: barFill,
                     child: Container(
                       height: 10,
                       decoration: BoxDecoration(
@@ -130,6 +149,8 @@ class HomeWidgetLarge extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onAddTap,
                   child: Container(
+                    height: 40,
+                    width: 100,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 6,
@@ -167,16 +188,24 @@ class HomeWidgetLarge extends StatelessWidget {
 
 class HomeWidgetSmall extends StatelessWidget {
   final double progress;
+  /// Se ambos forem informados, a % segue ingestão/meta (pode passar de 100).
+  final int? currentIntake;
+  final int? goal;
   final VoidCallback? onAddTap;
 
   const HomeWidgetSmall({
     super.key,
     required this.progress,
+    this.currentIntake,
+    this.goal,
     this.onAddTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final percentInt = (currentIntake != null && goal != null)
+        ? _displayPercentMl(currentIntake!, goal!)
+        : (progress * 100).toInt();
     return Container(
       width: 160,
       height: 160,
@@ -205,7 +234,7 @@ class HomeWidgetSmall extends StatelessWidget {
                   const Icon(Icons.water_drop, color: Colors.blue, size: 24),
                   const SizedBox(width: 4),
                   Text(
-                    "${(progress * 100).toInt()}%",
+                    "$percentInt%",
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -253,7 +282,7 @@ Widget homeWidgetLargePreview() {
     color: const Color(0xFFE3F2FD), // Simular fundo do celular
     padding: const EdgeInsets.all(20),
     child: const Center(
-      child: HomeWidgetLarge(progress: 0.62, currentIntake: 1250, goal: 2000),
+      child: HomeWidgetLarge(progress: 1.0, currentIntake: 2500, goal: 2000),
     ),
   );
 }

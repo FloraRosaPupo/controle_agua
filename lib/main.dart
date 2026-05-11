@@ -17,6 +17,9 @@ import 'core/config/load_supabase_local_stub.dart'
     as supa_local;
 import 'core/auth/app_jwt.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/quick_add_offline_persist.dart';
+import 'core/utils/network_error_heuristics.dart';
+import 'data/local/user_goal_cache.dart';
 
 import 'data/services/water_service.dart';
 import 'data/services/auth_service.dart';
@@ -33,6 +36,8 @@ import 'presentation/home/cubit/settings_cubit.dart';
 import 'presentation/home/cubit/notification_cubit.dart';
 import 'data/services/settings_service.dart';
 import 'package:flutter/foundation.dart';
+
+import 'core/services/midnight_widget_alarm.dart';
 
 class AppBlocObserver extends BlocObserver {
   @override
@@ -66,6 +71,9 @@ Future<void> _initSupabase() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    await MidnightWidgetAlarm.ensureInitialized();
+  }
   await loadSupabaseEnvFromAssets();
   supa_local.tryLoadSupabaseLocalJson();
   await AppTheme.initialize();
@@ -86,23 +94,37 @@ void main() async {
   final settingsService = SettingsService();
   notificationService.configureQuickAddAction(
     resolveQuickAddAmount: () async {
-      final data = await settingsService.getSettings();
-      final raw = data['quickAddAmount'];
-      if (raw is num && raw > 0) return raw.toInt();
-      return 200;
+      try {
+        final data = await settingsService.getSettings();
+        final raw = data['quickAddAmount'];
+        if (raw is num && raw > 0) {
+          final ml = raw.toInt();
+          await UserGoalCache.setQuickAddMl(ml);
+          return ml;
+        }
+      } catch (_) {}
+      return UserGoalCache.getQuickAddMlOrDefault();
     },
     onQuickAdd: (ml) async {
+      var fallbackGoal = await UserGoalCache.getDailyGoalMlOrDefault();
       try {
-        final added = await waterService.addWater(ml);
-        if (!added) return;
+        final data = await settingsService.getSettings();
+        final g = (data['dailyGoal'] as num?)?.toInt();
+        if (g != null && g > 0) {
+          fallbackGoal = g;
+          await UserGoalCache.setDailyGoalMl(g);
+        }
+      } catch (_) {}
+
+      try {
+        await waterService.addWater(ml);
 
         final today = await waterService.getTodayData();
         if (today == null || today.dailyGoal <= 0) return;
 
-        final percent = ((today.total / today.dailyGoal) * 100).toInt().clamp(
-          0,
-          100,
-        );
+        final percent = today.dailyGoal > 0
+            ? ((today.total * 100) ~/ today.dailyGoal)
+            : 0;
         final status = 'Você adicionou ${ml}ml';
         await notificationService.showProgressNotification(
           id: 995,
@@ -114,11 +136,20 @@ void main() async {
           ongoing: false,
         );
       } catch (e) {
-        await notificationService.showNotification(
-          id: 8889,
-          title: 'Bebeu?',
-          body: 'Sinal fraco, tente novamente.',
-        );
+        final queueOffline = messageSuggestsNetworkFailure(e.toString());
+        if (queueOffline) {
+          await persistQuickAddWaterOffline(
+            amountMl: ml,
+            fallbackGoalMl: fallbackGoal,
+            notify: notificationService,
+          );
+        } else {
+          await notificationService.showNotification(
+            id: 8889,
+            title: 'Bebeu?',
+            body: 'Não foi possível registrar. Abra o app e tente de novo.',
+          );
+        }
       }
     },
   );
@@ -151,7 +182,7 @@ void main() async {
     routes: [
       GoRoute(
         path: '/',
-        redirect: (_, __) => '/splash',
+        redirect: (context, state) => '/splash',
       ),
       GoRoute(
         name: 'splash',
@@ -218,10 +249,12 @@ Future<void> _syncWidgetWithLatestData({
   required SettingsService settingsService,
 }) async {
   if (!isLoggedIn) {
+    await UserGoalCache.clear();
     await WidgetService.updateHomeWidget(
       progress: 0,
       currentIntake: 0,
       goal: 2000,
+      quickAddMl: 200,
     );
     return;
   }
@@ -229,22 +262,30 @@ Future<void> _syncWidgetWithLatestData({
   try {
     final settings = await settingsService.getSettings();
     final fallbackGoal = (settings['dailyGoal'] as num?)?.toInt() ?? 2000;
+    await UserGoalCache.setDailyGoalMl(fallbackGoal);
+    final quickAdd = (settings['quickAddAmount'] as num?)?.toInt() ?? 200;
+    await UserGoalCache.setQuickAddMl(quickAdd);
     final today = await waterService.getTodayData();
 
     final total = today?.total ?? 0;
     final goal = (today?.dailyGoal ?? fallbackGoal).clamp(1, 100000);
+    await UserGoalCache.setDailyGoalMl(goal);
     final progress = (total / goal).clamp(0.0, 1.0);
 
     await WidgetService.updateHomeWidget(
       progress: progress,
       currentIntake: total,
       goal: goal,
+      quickAddMl: quickAdd,
     );
   } catch (_) {
+    final cachedGoal = await UserGoalCache.getDailyGoalMlOrDefault();
+    final cachedQuick = await UserGoalCache.getQuickAddMlOrDefault();
     await WidgetService.updateHomeWidget(
       progress: 0,
       currentIntake: 0,
-      goal: 2000,
+      goal: cachedGoal.clamp(1, 100000),
+      quickAddMl: cachedQuick,
     );
   }
 }
@@ -264,6 +305,27 @@ class _MyAppState extends State<MyApp> {
     if (!kIsWeb) {
       HomeWidget.widgetClicked.listen(_launchedFromWidget);
       _checkForWidgetLaunch();
+    }
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      AppJwt.authState.addListener(_syncMidnightAlarmWithAuth);
+      _syncMidnightAlarmWithAuth();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      AppJwt.authState.removeListener(_syncMidnightAlarmWithAuth);
+    }
+    super.dispose();
+  }
+
+  void _syncMidnightAlarmWithAuth() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    if (AppJwt.authState.value) {
+      MidnightWidgetAlarm.schedule();
+    } else {
+      MidnightWidgetAlarm.cancel();
     }
   }
 

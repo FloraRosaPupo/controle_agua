@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/utils/network_error_heuristics.dart';
 import '../cubit/notification_cubit.dart';
 import '../../../../core/models/notification_preferences.dart';
 import 'water_lottie.dart';
@@ -51,21 +52,44 @@ class _AlertsViewState extends State<AlertsView> {
                 if (state is NotificationLoading) {
                   return const Center(child: WaterLottie(size: 120));
                 } else if (state is NotificationError) {
+                  final msg = state.message;
+                  final network = messageSuggestsNetworkFailure(msg);
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.wifi_off_rounded, size: 60, color: colors.error.withValues(alpha: 0.5)),
+                        Icon(
+                          network
+                              ? Icons.wifi_off_rounded
+                              : Icons.error_outline_rounded,
+                          size: 60,
+                          color: colors.error.withValues(alpha: 0.5),
+                        ),
                         const SizedBox(height: 16),
-                        Text('Sem conexão ou erro de rede', style: theme.textTheme.titleMedium),
+                        Text(
+                          network
+                              ? 'Sem conexão estável'
+                              : 'Não foi possível carregar os alertas',
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: 8),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                          child: Text('Verifique sua conexão com a internet.', textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurface.withValues(alpha: 0.5))),
+                          child: Text(
+                            network
+                                ? 'Verifique a internet e tente novamente.\n\n$msg'
+                                : msg,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: () => context.read<NotificationCubit>().loadPreferences(),
+                          onPressed: () =>
+                              context.read<NotificationCubit>().loadPreferences(),
                           icon: const Icon(Icons.refresh),
                           label: const Text('Tentar novamente'),
                         ),

@@ -1,5 +1,7 @@
 import 'package:home_widget/home_widget.dart';
 
+import '../../data/local/user_goal_cache.dart';
+
 class WidgetService {
   static const String _androidWidgetLarge = 'HomeWidgetLargeProvider';
   static const String _androidWidgetSmall = 'HomeWidgetSmallProvider';
@@ -12,9 +14,13 @@ class WidgetService {
     required double progress,
     required int currentIntake,
     required int goal,
+    int? quickAddMl,
   }) async {
     try {
       await HomeWidget.setAppGroupId('group.com.example.bebeu');
+
+      final qa = quickAddMl ?? await UserGoalCache.getQuickAddMlOrDefault();
+      final quick = qa.clamp(10, 2000);
 
       await HomeWidget.saveWidgetData<int>('currentIntake', currentIntake);
       await HomeWidget.saveWidgetData<int>('goal', goal);
@@ -22,6 +28,7 @@ class WidgetService {
         'progressPercent',
         (progress * 100).toInt(),
       );
+      await HomeWidget.saveWidgetData<int>('quickAddMl', quick);
 
       await HomeWidget.updateWidget(name: _androidWidgetLarge);
       await HomeWidget.updateWidget(name: _androidWidgetSmall);

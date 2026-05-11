@@ -9,12 +9,13 @@ import 'config/supabase_env.dart';
 import 'config/load_supabase_env_assets.dart';
 import 'config/load_supabase_local_stub.dart'
     if (dart.library.io) 'config/load_supabase_local_io.dart' as supa_local;
+import 'services/quick_add_offline_persist.dart';
 import 'services/widget_service.dart';
+import '../data/local/user_goal_cache.dart';
 import '../data/services/water_service.dart';
 import '../data/services/settings_service.dart';
-import '../data/services/local_database_service.dart';
-import '../data/services/connectivity_service.dart';
 import 'services/notification_service.dart';
+import 'utils/network_error_heuristics.dart';
 
 /// Chamado pelo Android ao tocar em "+" no widget (broadcast em segundo plano).
 @pragma('vm:entry-point')
@@ -57,24 +58,27 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       return;
     }
 
-    var quickAddAmount = 200;
-    var fallbackGoal = 2000;
+    var quickAddAmount = await UserGoalCache.getQuickAddMlOrDefault();
+    var fallbackGoal = await UserGoalCache.getDailyGoalMlOrDefault();
 
-    final isConnected = await ConnectivityService.isConnected();
-    debugPrint('[Widget +] Conectado=$isConnected');
-
-    if (!isConnected) {
-      await _saveOffline(quickAddAmount, fallbackGoal, notify);
-      return;
-    }
+    debugPrint(
+      '[Widget +] Pré-add | quickAdd=$quickAddAmount | meta=$fallbackGoal '
+      '(tentamos API primeiro — connectivity pode indicar offline com Wi‑Fi)',
+    );
 
     final water = WaterService();
     final settingsService = SettingsService();
 
     try {
       final settingsInfo = await settingsService.getSettings();
-      quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ?? 200;
-      fallbackGoal = (settingsInfo['dailyGoal'] as num?)?.toInt() ?? 2000;
+      quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ??
+          quickAddAmount;
+      final g = (settingsInfo['dailyGoal'] as num?)?.toInt();
+      if (g != null && g > 0) {
+        fallbackGoal = g;
+        await UserGoalCache.setDailyGoalMl(g);
+      }
+      await UserGoalCache.setQuickAddMl(quickAddAmount);
       debugPrint(
         '[Widget +] Settings | quickAdd=$quickAddAmount | goal=$fallbackGoal',
       );
@@ -84,19 +88,27 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       );
     }
 
-    bool added = false;
     try {
       debugPrint('[Widget +] Enviando addWater($quickAddAmount)');
-      added = await water.addWater(quickAddAmount);
+      await water.addWater(quickAddAmount);
     } catch (e) {
-      debugPrint('[Widget +] addWater falhou: $e — salvando offline');
-      await _saveOffline(quickAddAmount, fallbackGoal, notify);
-      return;
-    }
-
-    if (!added) {
-      debugPrint('[Widget +] addWater retornou false — salvando offline');
-      await _saveOffline(quickAddAmount, fallbackGoal, notify);
+      // Só fila offline se o erro parecer transporte/rede (evita “sem rede” com Wi‑Fi ligado).
+      final treatAsOffline = messageSuggestsNetworkFailure(e.toString());
+      if (treatAsOffline) {
+        debugPrint('[Widget +] addWater falhou (rede): $e — gravando SQLite');
+        await persistQuickAddWaterOffline(
+          amountMl: quickAddAmount,
+          fallbackGoalMl: fallbackGoal,
+          notify: notify,
+        );
+      } else {
+        debugPrint('[Widget +] addWater falhou (API/servidor): $e');
+        await notify.showNotification(
+          id: 8890,
+          title: 'Bebeu? 💧',
+          body: 'Não foi possível registrar agora. Abra o app e tente de novo.',
+        );
+      }
       return;
     }
 
@@ -107,7 +119,7 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
       final total = data?.total ?? 0;
       final goal = (data?.dailyGoal ?? fallbackGoal).clamp(1, 100000);
       final progress = (total / goal).clamp(0.0, 1.0);
-      final percent = (progress * 100).toInt().clamp(0, 100);
+      final percent = goal > 0 ? ((total * 100) ~/ goal) : 0;
 
       await notify.showProgressNotification(
         id: 995,
@@ -122,6 +134,7 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
         progress: progress,
         currentIntake: total,
         goal: goal,
+        quickAddMl: quickAddAmount,
       );
       debugPrint('[Widget +] Widget atualizado | total=$total goal=$goal');
     } catch (e) {
@@ -142,41 +155,5 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
     } catch (_) {}
     debugPrint('[Widget +] ERRO: $e');
     debugPrint('[Widget +] STACKTRACE: $st');
-  }
-}
-
-Future<void> _saveOffline(
-  int amount,
-  int fallbackGoal,
-  NotificationService notify,
-) async {
-  try {
-    await LocalDatabaseService.addPendingLog(amount);
-
-    final cached = await LocalDatabaseService.getCachedData();
-    final cachedIntake = cached?['total_intake'] as int? ?? 0;
-    final goal = (cached?['daily_goal'] as int? ?? fallbackGoal).clamp(
-      1,
-      100000,
-    );
-    final newIntake = cachedIntake + amount;
-
-    await LocalDatabaseService.updateCachedIntake(newIntake);
-
-    final progress = (newIntake / goal).clamp(0.0, 1.0);
-    await WidgetService.updateHomeWidget(
-      progress: progress,
-      currentIntake: newIntake,
-      goal: goal,
-    );
-
-    await notify.showNotification(
-      id: 8888,
-      title: 'Bebeu? 💧',
-      body: '+${amount}ml guardado. Será sincronizado quando conectar.',
-    );
-    debugPrint('[Widget +] Offline: $amount ml salvo localmente');
-  } catch (e) {
-    debugPrint('[Widget +] Erro ao salvar offline: $e');
   }
 }

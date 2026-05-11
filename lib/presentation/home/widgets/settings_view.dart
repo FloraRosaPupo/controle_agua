@@ -3,6 +3,7 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/network_error_heuristics.dart';
 import '../../../data/services/auth_service.dart';
 import '../cubit/settings_cubit.dart';
 import 'change_password_dialog.dart';
@@ -394,25 +395,34 @@ class SettingsView extends StatelessWidget {
           return const Center(child: WaterLottie(size: 120));
         }
         if (state.error != null) {
+          final msg = state.error!;
+          final network = messageSuggestsNetworkFailure(msg);
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.wifi_off_rounded,
+                  network
+                      ? Icons.wifi_off_rounded
+                      : Icons.error_outline_rounded,
                   size: 60,
                   color: colors.error.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Sem conexão ou erro de rede',
+                  network
+                      ? 'Sem conexão estável'
+                      : 'Não foi possível carregar as configurações',
                   style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
                   child: Text(
-                    state.error!,
+                    network
+                        ? 'Verifique a internet e tente novamente.\n\n$msg'
+                        : msg,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.5),

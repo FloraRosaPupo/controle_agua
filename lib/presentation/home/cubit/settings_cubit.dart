@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../data/local/user_goal_cache.dart';
 import '../../../../data/services/settings_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/notification_service.dart';
@@ -77,12 +78,14 @@ class SettingsCubit extends Cubit<SettingsState> {
       final themeStr = data['theme'] ?? AppTheme.currentThemeString;
       await _applyTheme(themeStr, persist: true);
 
+      final dailyGoalMl = _clampDailyGoal((data['dailyGoal'] ?? 2000).toDouble());
+      final quickAddMl = (data['quickAddAmount'] ?? 200).toDouble();
       emit(
         state.copyWith(
           name: data['name'] ?? '',
           email: data['email'] ?? '',
-          dailyGoal: _clampDailyGoal((data['dailyGoal'] ?? 2000).toDouble()),
-          quickAddAmount: (data['quickAddAmount'] ?? 200).toDouble(),
+          dailyGoal: dailyGoalMl,
+          quickAddAmount: quickAddMl,
           theme: themeStr,
           dailyReminder: data['dailyReminder'] ?? true,
           vibration: data['vibration'] ?? true,
@@ -90,6 +93,8 @@ class SettingsCubit extends Cubit<SettingsState> {
           clearError: true,
         ),
       );
+      await UserGoalCache.setDailyGoalMl(dailyGoalMl.toInt());
+      await UserGoalCache.setQuickAddMl(quickAddMl.toInt());
       await NotificationService().setVibrationEnabled(state.vibration);
     } catch (e) {
       debugPrint('Erro loadSettings: $e');
@@ -126,6 +131,12 @@ class SettingsCubit extends Cubit<SettingsState> {
       final payloadValue =
           key == 'dailyGoal' ? _clampDailyGoal((value as num).toDouble()) : value;
       await _settingsService.updateSettings({key: payloadValue});
+      if (key == 'dailyGoal') {
+        await UserGoalCache.setDailyGoalMl((payloadValue as num).toInt());
+      }
+      if (key == 'quickAddAmount') {
+        await UserGoalCache.setQuickAddMl((value as num).toInt());
+      }
       if (key == 'vibration') {
         await NotificationService().setVibrationEnabled(value as bool);
       }

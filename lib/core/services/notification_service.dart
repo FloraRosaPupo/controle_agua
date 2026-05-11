@@ -154,8 +154,8 @@ class NotificationService {
 
   Future<void> _onNotificationResponse(NotificationResponse details) async {
     final isQuickAddAction = details.actionId == _quickAddActionId;
-    final isRecurringReminder = details.payload == _scheduledReminderPayload;
-    if (!isQuickAddAction || !isRecurringReminder) return;
+    // Só exigimos a ação "+": o payload pode vir vazio em alguns OEMs/Android ao tocar na ação.
+    if (!isQuickAddAction) return;
 
     final quickAddMl = await _resolveQuickAddAmount();
     final handler = _onQuickAddFromNotification;
@@ -268,11 +268,15 @@ class NotificationService {
     if (kIsWeb) return;
 
     final remaining = goalMl - currentMl;
-    final clampedPercent = percent.clamp(0, 100);
+    final barProgress = percent.clamp(0, 100);
+    final displayPercent = percent.clamp(0, 999);
 
     final String bodyText;
     if (remaining > 0) {
       bodyText = '$statusText • Faltam ${remaining}ml';
+    } else if (currentMl > goalMl && goalMl > 0) {
+      bodyText =
+          '$statusText • ${((currentMl * 100) ~/ goalMl)}% da meta';
     } else {
       bodyText = statusText;
     }
@@ -287,14 +291,14 @@ class NotificationService {
         visibility: NotificationVisibility.public,
         showWhen: true,
         enableVibration: _vibrationEnabled,
-        subText: '$clampedPercent%',
+        subText: '$displayPercent%',
         showProgress: true,
         maxProgress: 100,
-        progress: clampedPercent,
+        progress: barProgress,
         ongoing: ongoing,
         autoCancel: !ongoing,
       ),
-      iOS: DarwinNotificationDetails(subtitle: '$clampedPercent% da meta'),
+      iOS: DarwinNotificationDetails(subtitle: '$displayPercent% da meta'),
     );
 
     await _notificationsPlugin.show(
@@ -811,7 +815,7 @@ class NotificationService {
         title: '🎉 Meta atingida, $userName!',
         currentMl: current,
         goalMl: goal,
-        percent: percent.clamp(0, 100),
+        percent: percent,
         statusText: 'Parabéns! Você completou sua meta de ${goal}ml',
         ongoing: false,
       );
@@ -862,8 +866,9 @@ class NotificationService {
   }
 
   void _reshowProgressNotification() {
-    if (_lastCurrent == null || _lastGoal == null || _lastUserName == null)
+    if (_lastCurrent == null || _lastGoal == null || _lastUserName == null) {
       return;
+    }
     if (_lastCurrent! >= _lastGoal!) return;
     if (_notifiedMilestones.contains(100)) return;
 

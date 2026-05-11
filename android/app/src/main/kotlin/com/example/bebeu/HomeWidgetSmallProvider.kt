@@ -28,14 +28,18 @@ class HomeWidgetSmallProvider : HomeWidgetProvider() {
 
         val intake = widgetData.getInt("currentIntake", 0)
         val goal = widgetData.getInt("goal", 2000)
-        val progress = widgetData.getInt("progressPercent", 0).coerceIn(0, 100)
+        val displayPercent = if (goal > 0) {
+            ((intake * 100L) / goal).toInt().coerceIn(0, 9999)
+        } else {
+            0
+        }
         val fmt = Regex("(\\d)(?=(\\d{3})+(?!\\d))")
         val intakeStr = intake.toString().replace(fmt) { "${it.groupValues[1]}." }
         val goalStr = goal.toString().replace(fmt) { "${it.groupValues[1]}." }
 
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.home_widget_small).apply {
-                setTextViewText(R.id.widget_percent, "$progress%")
+                setTextViewText(R.id.widget_percent, "$displayPercent%")
                 setTextViewText(R.id.widget_intake_line, "$intakeStr / $goalStr ml")
 
                 setViewVisibility(R.id.widget_image, View.GONE)

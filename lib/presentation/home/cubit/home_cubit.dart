@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/daily_water_data_model.dart';
 import '../../../data/services/water_service.dart';
+import '../../../data/local/user_goal_cache.dart';
 import '../../../data/services/local_database_service.dart';
 import '../../../data/services/connectivity_service.dart';
 import '../../../core/services/widget_service.dart';
@@ -98,6 +99,7 @@ class HomeCubit extends Cubit<HomeState> {
       dailyGoal: dailyGoal,
       userName: data.name,
     );
+    unawaited(UserGoalCache.setDailyGoalMl(dailyGoal));
   }
 
 //emite o estado HomeOffline a partir dos dados do cache local
@@ -126,6 +128,7 @@ class HomeCubit extends Cubit<HomeState> {
         pendingAmount: pendingAmount,
       ),
     );
+    await UserGoalCache.setDailyGoalMl(goal);
   }
 
   Future<void> loadTodayData() async {

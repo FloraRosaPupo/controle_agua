@@ -28,7 +28,13 @@ class HomeWidgetLargeProvider : HomeWidgetProvider() {
 
         val intake = widgetData.getInt("currentIntake", 0)
         val goal = widgetData.getInt("goal", 2000)
-        val progress = widgetData.getInt("progressPercent", 0).coerceIn(0, 100)
+        val quickAdd = widgetData.getInt("quickAddMl", 200).coerceIn(10, 2000)
+        val displayPercent = if (goal > 0) {
+            ((intake * 100L) / goal).toInt().coerceIn(0, 9999)
+        } else {
+            0
+        }
+        val barProgress = minOf(100, displayPercent)
         val fmt = Regex("(\\d)(?=(\\d{3})+(?!\\d))")
         val intakeStr = intake.toString().replace(fmt) { "${it.groupValues[1]}." }
         val goalStr = goal.toString().replace(fmt) { "${it.groupValues[1]}." }
@@ -36,8 +42,9 @@ class HomeWidgetLargeProvider : HomeWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.home_widget_large).apply {
                 setTextViewText(R.id.widget_intake, "$intakeStr ml / $goalStr ml")
-                setTextViewText(R.id.widget_percent, "$progress%")
-                setProgressBar(R.id.widget_progress, 100, progress, false)
+                setTextViewText(R.id.widget_percent, "$displayPercent%")
+                setTextViewText(R.id.widget_quick_add_label, "+ $quickAdd ml")
+                setProgressBar(R.id.widget_progress, 100, barProgress, false)
 
                 setViewVisibility(R.id.widget_image, View.GONE)
                 setViewVisibility(R.id.widget_default, View.VISIBLE)

@@ -53,6 +53,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   dotlottie_loader: ^0.0.5
   supabase_flutter: ^2.12.4
+  android_alarm_manager_plus: 4.0.8
 
 dev_dependencies:
   flutter_test:
