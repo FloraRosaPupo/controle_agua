@@ -116,3 +116,8 @@ A CI valida análise e testes em pushes e pull requests. Serviços externos prec
 Em `backend`, copie `.env.example` para `.env` e configure PostgreSQL e um segredo JWT próprio. Execute `npm ci`, `npm run build`, `npm test` e `npm run dev` (tsx). Para produção, `npm start` usa a saída gerada em `dist`. O esquema está em `backend/prisma/schema.prisma`; aplique as migrações existentes ao seu banco conforme o ambiente.
 
 O arquivo `.env` antigo foi removido do versionamento, mas permanece no histórico: rotacione as credenciais que estavam nele. Não reutilize os exemplos como segredos reais.
+
+
+### Testes visuais
+
+As referências em `test/goldens` correspondem às telas atuais, estado carregado com intervalo de 120 minutos, dias úteis e notificações ativadas, em Flutter 3.41.1 no Windows. A CI Flutter usa Windows para evitar diferenças de rasterização entre sistemas. As imagens anteriores representavam layouts antigos. As novas imagens foram comparadas visualmente antes da atualização. Não atualize referências automaticamente na CI; revise cada diferença antes de aceitar um novo baseline. Os blocos de texto nas imagens são a fonte Ahem padrão dos testes Flutter.
