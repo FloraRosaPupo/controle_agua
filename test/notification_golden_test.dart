@@ -14,6 +14,10 @@ void main() {
 
   setUp(() {
     mockCubit = MockNotificationCubit();
+    when(() => mockCubit.state).thenReturn(NotificationLoaded(
+      NotificationPreferences(intervalMinutes: 120, activeDays: [1, 2, 3, 4, 5],
+        startTime: '08:00', endTime: '22:00', enabled: true)));
+    when(() => mockCubit.stream).thenAnswer((_) => const Stream<NotificationState>.empty());
     when(() => mockCubit.loadPreferences()).thenAnswer((_) async {});
     when(() => mockCubit.close()).thenAnswer((_) async {});
   });

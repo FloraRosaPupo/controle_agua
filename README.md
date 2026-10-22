@@ -1,4 +1,3 @@
-
 # 💧 bebeu?
 
 Aplicativo mobile para controle de consumo diário de água.
@@ -96,3 +95,24 @@ Criar um aplicativo simples e eficiente para incentivar a hidratação diária, 
 - Sistema de conquistas
 - Backup em nuvem
 
+
+
+## Desenvolvimento e validação
+
+O aplicativo está em `.`. Use Flutter 3.41.1. Na pasta do aplicativo, execute:
+
+```sh
+flutter pub get
+flutter analyze --no-fatal-infos --no-fatal-warnings
+flutter test
+flutter run
+```
+
+A CI valida análise e testes em pushes e pull requests. Serviços externos precisam de configuração própria.
+
+
+### Backend
+
+Em `backend`, copie `.env.example` para `.env` e configure PostgreSQL e um segredo JWT próprio. Execute `npm ci`, `npm run build`, `npm test` e `npm run dev` (tsx). Para produção, `npm start` usa a saída gerada em `dist`. O esquema está em `backend/prisma/schema.prisma`; aplique as migrações existentes ao seu banco conforme o ambiente.
+
+O arquivo `.env` antigo foi removido do versionamento, mas permanece no histórico: rotacione as credenciais que estavam nele. Não reutilize os exemplos como segredos reais.
