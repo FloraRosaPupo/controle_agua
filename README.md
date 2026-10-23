@@ -1,36 +1,28 @@
-# 💧 bebeu?
+# bebeu? — Controle de Hidratação
 
-Aplicativo mobile para controle de consumo diário de água.
+## Descrição
 
-O **bebeu?** ajuda o usuário a registrar a quantidade de água ingerida ao longo do dia, acompanhar o progresso em relação à meta diária, receber lembretes para se hidratar e visualizar o histórico dos últimos 7 dias.
+Aplicativo Flutter para registrar o consumo diário de água, acompanhar uma meta, consultar o histórico recente e configurar lembretes. O repositório também contém um backend Node.js/TypeScript e integrações com Supabase; serviços e notificações exigem configuração do ambiente.
 
-Simples, direto e funcional. Se não bebeu… ele pergunta. 😅
+## Stack e bibliotecas
 
----
+Flutter/Dart, Cubit, notificações, Supabase; Node.js, TypeScript, Express e Prisma no backend.
 
-## 📱 Funcionalidades
+Dependências e versões declaradas: [backend/package.json](backend/package.json), [pubspec.yaml](pubspec.yaml).
 
-### ✅ Registro de Consumo
-- Adicionar quantidade de água ingerida (em ml)
-- Atualização automática do progresso diário
-- Soma acumulada em tempo real
+## Funcionalidades
 
-### 🎯 Meta Diária
-- Definição de meta personalizada (ex: 2000 ml)
-- Indicador visual de progresso (barra ou círculo)
-- Feedback ao atingir 100% da meta
+- Registro de água.
+- Meta e histórico.
+- Configurações e notificações.
 
-### 🔔 Notificações
-- Lembretes periódicos para beber água
-- Intervalo configurável
-- Possibilidade de ativar/desativar notificações
+## Licença
 
-### 📊 Histórico (Últimos 7 Dias)
-- Visualização do consumo diário
-- Comparação simples entre dias
-- Exclusão automática de dados com mais de 7 dias
+Não há uma licença de distribuição definida para este repositório. Nenhuma licença MIT, Apache ou equivalente é concedida por este README. As atribuições e os direitos dos materiais de terceiros permanecem preservados.
 
----
+## Validação e limites
+
+Preferências, telas com referências visuais revisadas e resposta pública de cadastro. Notificações reais e sincronização offline exigem dispositivos e backend.
 
 ## 🧠 Regras de Negócio
 
@@ -45,15 +37,6 @@ Simples, direto e funcional. Se não bebeu… ele pergunta. 😅
 ## 🗂 Estrutura Base do Projeto
 
 `lib/features/auth` e `lib/features/hydration` agrupam cada funcionalidade; `lib/core` contém integrações compartilhadas. `backend` e `supabase/functions` são implementações de servidor.
-
-## 🛠 Tecnologias Utilizadas
-
-- Flutter
-- Dart
-- Armazenamento local (SharedPreferences ou SQLite)
-- Notificações locais
-
----
 
 ## 📌 Objetivo do Projeto
 
@@ -72,8 +55,6 @@ Criar um aplicativo simples e eficiente para incentivar a hidratação diária, 
 - Estatísticas semanais e médias
 - Sistema de conquistas
 - Backup em nuvem
-
-
 
 ## Desenvolvimento e validação
 
@@ -99,12 +80,6 @@ O arquivo `.env` antigo foi removido do versionamento, mas permanece no históri
 ### Testes visuais
 
 As referências em `test/goldens` correspondem às telas atuais, estado carregado com intervalo de 120 minutos, dias úteis e notificações ativadas, em Flutter 3.41.1 no Windows. A CI Flutter usa Windows para evitar diferenças de rasterização entre sistemas. As imagens anteriores representavam layouts antigos. As novas imagens foram comparadas visualmente antes da atualização. Não atualize referências automaticamente na CI; revise cada diferença antes de aceitar um novo baseline. Os blocos de texto nas imagens são a fonte Ahem padrão dos testes Flutter.
-
-
-## Licença
-
-Não há licença de distribuição definida neste repositório. Os direitos de terceiros e as atribuições existentes devem ser respeitados; esta revisão não concede permissão de redistribuição.
-
 
 ## Organização e manutenção
 
