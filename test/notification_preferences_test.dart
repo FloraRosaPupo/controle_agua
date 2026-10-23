@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bebeu/core/models/notification_preferences.dart';
+import 'package:bebeu/features/hydration/domain/notification_preferences.dart';
 
 void main() {
   group('NotificationPreferences', () {

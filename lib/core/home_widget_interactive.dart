@@ -8,12 +8,13 @@ import 'auth/app_jwt.dart';
 import 'config/supabase_env.dart';
 import 'config/load_supabase_env_assets.dart';
 import 'config/load_supabase_local_stub.dart'
-    if (dart.library.io) 'config/load_supabase_local_io.dart' as supa_local;
+    if (dart.library.io) 'config/load_supabase_local_io.dart'
+    as supa_local;
 import 'services/quick_add_offline_persist.dart';
 import 'services/widget_service.dart';
-import '../data/local/user_goal_cache.dart';
-import '../data/services/water_service.dart';
-import '../data/services/settings_service.dart';
+import '../features/hydration/data/local/user_goal_cache.dart';
+import '../features/hydration/data/water_service.dart';
+import '../features/hydration/data/settings_service.dart';
 import 'services/notification_service.dart';
 import 'utils/network_error_heuristics.dart';
 
@@ -71,8 +72,8 @@ Future<void> homeWidgetInteractiveCallback(Uri? uri) async {
 
     try {
       final settingsInfo = await settingsService.getSettings();
-      quickAddAmount = (settingsInfo['quickAddAmount'] as num?)?.toInt() ??
-          quickAddAmount;
+      quickAddAmount =
+          (settingsInfo['quickAddAmount'] as num?)?.toInt() ?? quickAddAmount;
       final g = (settingsInfo['dailyGoal'] as num?)?.toInt();
       if (g != null && g > 0) {
         fallbackGoal = g;

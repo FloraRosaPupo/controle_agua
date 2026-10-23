@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:bebeu/presentation/home/widgets/alerts_view.dart';
-import 'package:bebeu/presentation/home/widgets/notification_settings_view.dart';
-import 'package:bebeu/presentation/home/cubit/notification_cubit.dart';
-import 'package:bebeu/core/models/notification_preferences.dart';
+import 'package:bebeu/features/hydration/presentation/widgets/alerts_view.dart';
+import 'package:bebeu/features/hydration/presentation/widgets/notification_settings_view.dart';
+import 'package:bebeu/features/hydration/presentation/cubit/notification_cubit.dart';
+import 'package:bebeu/features/hydration/domain/notification_preferences.dart';
 
 class MockNotificationCubit extends Mock implements NotificationCubit {}
 
@@ -14,10 +14,20 @@ void main() {
 
   setUp(() {
     mockCubit = MockNotificationCubit();
-    when(() => mockCubit.state).thenReturn(NotificationLoaded(
-      NotificationPreferences(intervalMinutes: 120, activeDays: [1, 2, 3, 4, 5],
-        startTime: '08:00', endTime: '22:00', enabled: true)));
-    when(() => mockCubit.stream).thenAnswer((_) => const Stream<NotificationState>.empty());
+    when(() => mockCubit.state).thenReturn(
+      NotificationLoaded(
+        NotificationPreferences(
+          intervalMinutes: 120,
+          activeDays: [1, 2, 3, 4, 5],
+          startTime: '08:00',
+          endTime: '22:00',
+          enabled: true,
+        ),
+      ),
+    );
+    when(
+      () => mockCubit.stream,
+    ).thenAnswer((_) => const Stream<NotificationState>.empty());
     when(() => mockCubit.loadPreferences()).thenAnswer((_) async {});
     when(() => mockCubit.close()).thenAnswer((_) async {});
   });
@@ -42,7 +52,9 @@ void main() {
     );
   });
 
-  testWidgets('NotificationSettingsView loaded state golden test', (tester) async {
+  testWidgets('NotificationSettingsView loaded state golden test', (
+    tester,
+  ) async {
     final prefs = NotificationPreferences(
       intervalMinutes: 120,
       activeDays: [1, 2, 3, 4, 5],
@@ -52,9 +64,13 @@ void main() {
     );
 
     when(() => mockCubit.state).thenReturn(NotificationLoaded(prefs));
-    when(() => mockCubit.stream).thenAnswer((_) => Stream.value(NotificationLoaded(prefs)));
+    when(
+      () => mockCubit.stream,
+    ).thenAnswer((_) => Stream.value(NotificationLoaded(prefs)));
 
-    await tester.pumpWidget(createWidgetUnderTest(const NotificationSettingsView()));
+    await tester.pumpWidget(
+      createWidgetUnderTest(const NotificationSettingsView()),
+    );
     await tester.pumpAndSettle();
 
     await expectLater(
