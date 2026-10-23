@@ -19,22 +19,22 @@ import 'core/auth/app_jwt.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/quick_add_offline_persist.dart';
 import 'core/utils/network_error_heuristics.dart';
-import 'data/local/user_goal_cache.dart';
+import 'features/hydration/data/local/user_goal_cache.dart';
 
-import 'data/services/water_service.dart';
-import 'data/services/auth_service.dart';
+import 'features/hydration/data/water_service.dart';
+import 'features/auth/data/auth_service.dart';
 
-import 'presentation/auth/login_page.dart';
-import 'presentation/auth/register_page.dart';
-import 'presentation/home/home_page.dart';
-import 'presentation/splash/splash_page.dart';
-import 'presentation/home/cubit/home_cubit.dart';
-import 'presentation/home/cubit/history_cubit.dart';
-import 'presentation/auth/cubit/login_cubit.dart';
-import 'presentation/auth/cubit/register_cubit.dart';
-import 'presentation/home/cubit/settings_cubit.dart';
-import 'presentation/home/cubit/notification_cubit.dart';
-import 'data/services/settings_service.dart';
+import 'features/auth/presentation/login_page.dart';
+import 'features/auth/presentation/register_page.dart';
+import 'features/hydration/presentation/home_page.dart';
+import 'app/splash_page.dart';
+import 'features/hydration/presentation/cubit/home_cubit.dart';
+import 'features/hydration/presentation/cubit/history_cubit.dart';
+import 'features/auth/presentation/cubit/login_cubit.dart';
+import 'features/auth/presentation/cubit/register_cubit.dart';
+import 'features/hydration/presentation/cubit/settings_cubit.dart';
+import 'features/hydration/presentation/cubit/notification_cubit.dart';
+import 'features/hydration/data/settings_service.dart';
 import 'package:flutter/foundation.dart';
 
 import 'core/services/midnight_widget_alarm.dart';
@@ -180,10 +180,7 @@ void main() async {
     },
     initialLocation: '/splash',
     routes: [
-      GoRoute(
-        path: '/',
-        redirect: (context, state) => '/splash',
-      ),
+      GoRoute(path: '/', redirect: (context, state) => '/splash'),
       GoRoute(
         name: 'splash',
         path: '/splash',
@@ -213,9 +210,7 @@ void main() async {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Rota não encontrada: ${state.uri}'),
-      ),
+      body: Center(child: Text('Rota não encontrada: ${state.uri}')),
     ),
   );
 

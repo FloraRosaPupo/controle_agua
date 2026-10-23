@@ -1,6 +1,6 @@
 import 'package:home_widget/home_widget.dart';
 
-import '../../data/local/user_goal_cache.dart';
+import '../../features/hydration/data/local/user_goal_cache.dart';
 
 class WidgetService {
   static const String _androidWidgetLarge = 'HomeWidgetLargeProvider';

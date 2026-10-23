@@ -43,3 +43,27 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Generated files and machine-specific configuration
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+node_modules/
+.dart_tool/
+.gradle/
+.cxx/
+build/
+.firebase/
+.vs/
+*.vcxproj.user
+desktop.ini
+local.properties
+test/failures/
+coverage/
+.env
+.env.*
+!.env.example
+
+/backend/dist/

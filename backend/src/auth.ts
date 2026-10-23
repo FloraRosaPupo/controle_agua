@@ -1,3 +1,4 @@
+import { publicUser } from "./public_user"
 import { prisma } from "./prisma"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
@@ -31,7 +32,7 @@ export async function register(req: Request, res: Response) {
                 }
             }
         })
-        res.json(user)
+        res.json(publicUser(user))
     } catch (error) {
         console.error("Erro no cadastro:", error)
         res.status(400).json({ error: "Erro ao criar usuário.", details: error instanceof Error ? error.message : "Erro desconhecido" })

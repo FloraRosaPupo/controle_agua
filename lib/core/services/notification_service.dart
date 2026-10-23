@@ -6,7 +6,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../models/notification_preferences.dart';
+import '../../features/hydration/domain/notification_preferences.dart';
 
 /// Um par (dia da semana [DateTime.weekday], minutos desde 00:00) para agendar.
 class _HydrationSlot {
@@ -275,8 +275,7 @@ class NotificationService {
     if (remaining > 0) {
       bodyText = '$statusText • Faltam ${remaining}ml';
     } else if (currentMl > goalMl && goalMl > 0) {
-      bodyText =
-          '$statusText • ${((currentMl * 100) ~/ goalMl)}% da meta';
+      bodyText = '$statusText • ${((currentMl * 100) ~/ goalMl)}% da meta';
     } else {
       bodyText = statusText;
     }

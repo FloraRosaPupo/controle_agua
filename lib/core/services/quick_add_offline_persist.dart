@@ -1,5 +1,5 @@
-import '../../data/local/user_goal_cache.dart';
-import '../../data/services/local_database_service.dart';
+import '../../features/hydration/data/local/user_goal_cache.dart';
+import 'local_database_service.dart';
 import 'notification_service.dart';
 import 'widget_service.dart';
 
