@@ -2,8 +2,10 @@ import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
 import routes from "./routes"
+import { getJwtSecret } from "./config"
 
 dotenv.config()
+getJwtSecret()
 
 const app = express()
 

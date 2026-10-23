@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken"
+import { getJwtSecret } from "./config"
 import { register, login } from "./auth"
 import { addWater, history, today, deleteWater } from "./water"
 import { getSettings, updateSettings, changePassword } from "./settings"
@@ -15,7 +16,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
     const token = auth.split(" ")[1]
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
+        const decoded = jwt.verify(token, getJwtSecret()) as { userId: string }
         (req as AuthRequest).userId = decoded.userId
         next()
     } catch {

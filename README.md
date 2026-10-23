@@ -72,6 +72,8 @@ A CI valida análise e testes em pushes e pull requests. Serviços externos prec
 
 ### Backend
 
+`JWT_SECRET` deve ser um valor aleatório próprio de pelo menos 32 caracteres. O servidor recusa configuração ausente, curta, com espaços nas extremidades ou com o placeholder de `.env.example`. Gere o segredo no ambiente seguro de implantação e nunca o versione. Ao trocar o segredo usado pelo servidor, os tokens antigos deixam de ser válidos e os usuários precisam autenticar novamente. Essa validação não realiza a rotação das credenciais já expostas.
+
 Em `backend`, copie `.env.example` para `.env` e configure PostgreSQL e um segredo JWT próprio. Execute `npm ci`, `npm run build`, `npm test` e `npm run dev` (tsx). Para produção, `npm start` usa a saída gerada em `dist`. O esquema está em `backend/prisma/schema.prisma`; aplique as migrações existentes ao seu banco conforme o ambiente.
 
 O arquivo `.env` antigo foi removido do versionamento, mas permanece no histórico: rotacione as credenciais que estavam nele. Não reutilize os exemplos como segredos reais.

@@ -1,4 +1,5 @@
 import { publicUser } from "./public_user"
+import { getJwtSecret } from "./config"
 import { prisma } from "./prisma"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
@@ -56,7 +57,7 @@ export async function login(req: Request, res: Response) {
 
     const token = jwt.sign(
         { userId: user.id },
-        process.env.JWT_SECRET!,
+        getJwtSecret(),
         { expiresIn: "7d" }
     )
 
